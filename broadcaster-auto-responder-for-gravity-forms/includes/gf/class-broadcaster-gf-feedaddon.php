@@ -133,9 +133,19 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 * line below the key both want the same answer; caching means a single
 	 * round-trip to Broadcaster per settings-page render.
 	 *
-	 * @var array|null|false  null = test ran with no result, false = not yet tested.
+	 * Keyed on `{api_url}|{api_key}` so that when the saved key changes
+	 * (e.g. after a Save Settings post-back) the next call re-tests.
+	 *
+	 * @var array|null
 	 */
-	private $connection_test_cache = false;
+	private $connection_test_cache = null;
+
+	/**
+	 * Cache key of the currently-cached test result.
+	 *
+	 * @var string|null
+	 */
+	private $connection_test_cache_key = null;
 
 	/**
 	 * Resolve the Broadcaster URL the plugin should call.
@@ -187,7 +197,9 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$status_field = array(
 			'name' => 'connection_status',
 			'type' => 'html',
-			'html' => $this->render_connection_status(),
+			// Pass a callable so the status renders at field-render time
+			// (after Save commits), not at schema-build time (before Save).
+			'html' => array( $this, 'render_connection_status' ),
 		);
 
 		if ( $this->is_production() ) {
@@ -242,8 +254,9 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
-	 * Run the connection test once per request, caching the result so the
-	 * feedback indicator and the status line below the key share one call.
+	 * Run the connection test, caching the result keyed on the actual
+	 * api_url + api_key so a Save Settings post-back invalidates the
+	 * previous render's cache automatically.
 	 *
 	 * @param string|null $value The api_key being rendered. When null, falls
 	 *                           back to the saved value.
@@ -252,22 +265,47 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 *               Null when there is no key to test.
 	 */
 	private function run_connection_test( $value = null ): ?array {
-		if ( false !== $this->connection_test_cache ) {
-			return $this->connection_test_cache;
-		}
-
 		$api_key = null === $value
 			? trim( (string) $this->get_plugin_setting( 'api_key' ) )
 			: trim( (string) $value );
 
 		if ( '' === $api_key ) {
-			$this->connection_test_cache = null;
 			return null;
 		}
 
-		$client                      = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
-		$this->connection_test_cache = $client->test_connection();
+		$api_url   = $this->get_api_url();
+		$cache_key = $api_url . '|' . $api_key;
+		if ( $cache_key === $this->connection_test_cache_key ) {
+			return $this->connection_test_cache;
+		}
+
+		$client                          = new \BroadcasterGF\Api\Client( $api_url, $api_key );
+		$this->connection_test_cache     = $client->test_connection();
+		$this->connection_test_cache_key = $cache_key;
 		return $this->connection_test_cache;
+	}
+
+	/**
+	 * Reset the cached connection-test result.
+	 *
+	 * Called from update_plugin_settings so the post-save render of the
+	 * status field tests against the freshly saved key, not the value
+	 * cached at schema-build time.
+	 */
+	private function reset_connection_test_cache(): void {
+		$this->connection_test_cache     = null;
+		$this->connection_test_cache_key = null;
+	}
+
+	/**
+	 * Persist plugin settings, invalidating the connection-test cache so
+	 * the next render reflects the just-saved key.
+	 *
+	 * @param array $settings New settings about to be written.
+	 */
+	public function update_plugin_settings( $settings ) {
+		$this->reset_connection_test_cache();
+		return parent::update_plugin_settings( $settings );
 	}
 
 	/**
@@ -275,8 +313,11 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 *
 	 * Empty when no key is saved (the field-level tick already covers it
 	 * once a key is entered).
+	 *
+	 * Public because GF's 'html' field type calls it at field-render time
+	 * (post-save), not at schema-build time (pre-save).
 	 */
-	private function render_connection_status(): string {
+	public function render_connection_status(): string {
 		$result = $this->run_connection_test();
 		if ( null === $result ) {
 			return '';
