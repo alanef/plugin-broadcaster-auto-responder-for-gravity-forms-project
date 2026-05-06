@@ -70,21 +70,21 @@ jobs:
         cp dist/broadcaster-auto-responder-for-gravity-forms.zip "dist/broadcaster-auto-responder-for-gravity-forms-${PLUGIN_VERSION}.zip"
         
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         files: dist/*.zip
         body: |
-          Release of Broadcaster Auto Responder for Gravity Forms v${{ github.ref_name }}
-          
+          Release of Broadcaster Auto Responder for Gravity Forms ${{ github.ref_name }}
+
           ## Installation
-          1. Download `broadcaster-auto-responder-for-gravity-forms.zip` from the assets below
-          2. In WordPress admin, go to Plugins > Add New > Upload Plugin
-          3. Choose the downloaded zip file and click Install Now
-          4. Activate the plugin
-          5. Configure the plugin in Settings > Broadcaster Auto Responder for Gravity Forms
-          
+          1. Download `broadcaster-auto-responder-for-gravity-forms.zip` from the assets below.
+          2. In WordPress admin, go to Plugins → Add New → Upload Plugin.
+          3. Choose the downloaded zip file and click Install Now.
+          4. Activate the plugin.
+          5. Configure the plugin under Forms → Settings → Broadcaster (a paid Broadcaster account is required).
+
           ## Changelog
-          See [readme.txt](broadcaster-auto-responder-for-gravity-forms/readme.txt) for detailed changelog.
+          See [readme.txt](broadcaster-auto-responder-for-gravity-forms/readme.txt) for the detailed changelog.
         draft: false
         prerelease: false
       env:

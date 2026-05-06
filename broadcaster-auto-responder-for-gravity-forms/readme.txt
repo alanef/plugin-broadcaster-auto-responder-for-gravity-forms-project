@@ -3,12 +3,12 @@ Contributors: alanef, fullworks
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Send Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages with optional template auto-response. Paid Broadcaster account required.
+Forward Gravity Forms submissions to Broadcaster (paid WhatsApp business platform) as inbound contact messages with optional template reply.
 
 == Description ==
 
@@ -109,6 +109,11 @@ Broadcaster's phone normalization expects an international number (e.g. `+447714
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.0.1 =
+* Tightened the WordPress.org short description to fit within the 150-character limit.
+* Release-workflow polish: corrected the `vv1.0.0`-style title in GitHub Release notes, fixed the boilerplate-leftover settings-path text, bumped `actions/checkout` and `softprops/action-gh-release` to versions that run on Node.js 24.
+* No functional changes to the plugin code itself.
 
 = 1.0.0 =
 * Initial release.
