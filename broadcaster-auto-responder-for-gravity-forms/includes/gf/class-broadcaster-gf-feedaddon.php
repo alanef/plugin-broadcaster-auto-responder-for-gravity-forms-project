@@ -122,6 +122,18 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * Build the ghost-text placeholder for the Source label field.
+	 *
+	 * Falls back to 'webform' when no form title is available so the field
+	 * always shows what the dispatched source will actually look like.
+	 */
+	private function source_label_placeholder(): string {
+		$form  = $this->get_current_form();
+		$title = is_array( $form ) ? trim( (string) rgar( $form, 'title' ) ) : '';
+		return '' !== $title ? $title : 'webform';
+	}
+
+	/**
 	 * Define the per-feed settings UI shown when editing a feed.
 	 */
 	public function feed_settings_fields() {
