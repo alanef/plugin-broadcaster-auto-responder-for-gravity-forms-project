@@ -1,6 +1,6 @@
 {
     "name": "broadcaster-auto-responder-for-gravity-forms",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Sends Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages.",
     "author": "Fullworks",
     "license": "GPL-2.0-or-later",

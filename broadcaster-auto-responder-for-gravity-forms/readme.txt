@@ -3,7 +3,7 @@ Contributors: alanef, fullworks
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -109,6 +109,9 @@ Broadcaster's phone normalization expects an international number (e.g. `+447714
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.0.2 =
+* **Critical fix:** the v1.0.0 and v1.0.1 release zips were built without the plugin's `vendor/autoload.php`, causing a fatal error when opening *Forms → Settings → Broadcaster* (`Class "BroadcasterGF\Api\Client" not found`). The release workflow now runs `composer install --no-dev --optimize-autoloader` inside the plugin directory before packaging the zip, so the autoloader and namespaced classes ship correctly. Anyone running v1.0.0 or v1.0.1 should upgrade immediately.
 
 = 1.0.1 =
 * Tightened the WordPress.org short description to fit within the 150-character limit.
