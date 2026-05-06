@@ -58,16 +58,19 @@ class Notices {
 	}
 
 	/**
-	 * True when both api_url and api_key are saved in the GF add-on settings.
+	 * True when an API key is saved in the GF add-on settings.
+	 *
+	 * The API URL is locked to the live SaaS in production and defaults
+	 * to it on dev/staging/local, so its presence is no longer part of
+	 * the "configured" check — only the key matters.
 	 */
 	private function api_configured(): bool {
 		$opt = get_option( Plugin::SETTINGS_OPTION_KEY, array() );
 		if ( ! is_array( $opt ) ) {
 			return false;
 		}
-		$api_url = isset( $opt['api_url'] ) ? trim( (string) $opt['api_url'] ) : '';
 		$api_key = isset( $opt['api_key'] ) ? trim( (string) $opt['api_key'] ) : '';
-		return '' !== $api_url && '' !== $api_key;
+		return '' !== $api_key;
 	}
 
 	/**
@@ -88,7 +91,7 @@ class Notices {
 		printf(
 			'<div class="notice notice-warning"><p><strong>%s</strong> %s <a href="%s">%s</a></p></div>',
 			esc_html__( 'Broadcaster Auto Responder for Gravity Forms:', 'broadcaster-auto-responder-for-gravity-forms' ),
-			esc_html__( 'Broadcaster API URL or API key is not configured.', 'broadcaster-auto-responder-for-gravity-forms' ),
+			esc_html__( 'Broadcaster API key is not configured.', 'broadcaster-auto-responder-for-gravity-forms' ),
 			esc_url( admin_url( self::GF_SETTINGS_PAGE ) ),
 			esc_html__( 'Configure now', 'broadcaster-auto-responder-for-gravity-forms' )
 		);

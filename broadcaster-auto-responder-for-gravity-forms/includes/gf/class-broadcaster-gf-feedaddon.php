@@ -122,34 +122,83 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * Live SaaS URL — locked in production, default everywhere else.
+	 */
+	const LIVE_SAAS_URL = 'https://getbroadcaster.com';
+
+	/**
+	 * Resolve the Broadcaster URL the plugin should call.
+	 *
+	 * In a production environment we always hit the live SaaS — site
+	 * owners can't accidentally point production traffic at a dev or
+	 * staging instance. Outside production, the saved value wins (and
+	 * falls back to the live URL when nothing has been saved yet so a
+	 * fresh install is functional immediately).
+	 */
+	public function get_api_url(): string {
+		if ( $this->is_production() ) {
+			return self::LIVE_SAAS_URL;
+		}
+		$saved = trim( (string) $this->get_plugin_setting( 'api_url' ) );
+		return '' !== $saved ? $saved : self::LIVE_SAAS_URL;
+	}
+
+	/**
+	 * True when WP_ENVIRONMENT_TYPE resolves to 'production'.
+	 *
+	 * Treats sites with no environment defined as production (matches
+	 * WordPress's own default).
+	 */
+	private function is_production(): bool {
+		if ( ! function_exists( 'wp_get_environment_type' ) ) {
+			return true;
+		}
+		return 'production' === wp_get_environment_type();
+	}
+
+	/**
 	 * Plugin-level settings shown under Forms → Settings → Broadcaster.
 	 *
-	 * Mirrors the EmailOctopus add-on layout: API URL + API key with a
-	 * feedback_callback on the key that renders a green tick / red cross
-	 * next to the field whenever the page loads, by hitting Broadcaster's
-	 * /api/v1/messages/incoming with an empty body and reading the auth
-	 * status code.
+	 * Mirrors the EmailOctopus add-on layout: API URL (only on dev/staging/
+	 * local) + API key with a feedback_callback that renders a green tick /
+	 * red cross next to the field whenever the page loads.
 	 */
 	public function plugin_settings_fields() {
+		$api_key_field = array(
+			'name'              => 'api_key',
+			'label'             => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'type'              => 'text',
+			'class'             => 'medium',
+			'tooltip'           => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'feedback_callback' => array( $this, 'check_api_credentials' ),
+		);
+
+		if ( $this->is_production() ) {
+			return array(
+				array(
+					'description' => '<p>' . sprintf(
+						/* translators: %s: live Broadcaster URL */
+						esc_html__( 'This site is running in production and connects to Broadcaster at %s.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'<code>' . esc_html( self::LIVE_SAAS_URL ) . '</code>'
+					) . '</p>',
+					'fields'      => array( $api_key_field ),
+				),
+			);
+		}
+
 		return array(
 			array(
 				'description' => '<p>' . esc_html__( 'Connect this site to your Broadcaster account so Gravity Forms submissions can be injected as incoming WhatsApp contact messages.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</p>',
 				'fields'      => array(
 					array(
-						'name'    => 'api_url',
-						'label'   => esc_html__( 'Broadcaster site URL', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'text',
-						'class'   => 'medium',
-						'tooltip' => esc_html__( 'Site root only — do not include /api/v1.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'name'          => 'api_url',
+						'label'         => esc_html__( 'Broadcaster site URL', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'          => 'text',
+						'class'         => 'medium',
+						'default_value' => self::LIVE_SAAS_URL,
+						'tooltip'       => esc_html__( 'Override only when testing against a dev or staging Broadcaster. Site root only — do not include /api/v1. Production sites always use the live SaaS regardless of this value.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
-					array(
-						'name'              => 'api_key',
-						'label'             => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'              => 'text',
-						'class'             => 'medium',
-						'tooltip'           => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'feedback_callback' => array( $this, 'check_api_credentials' ),
-					),
+					$api_key_field,
 				),
 			),
 		);
@@ -168,13 +217,11 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 */
 	public function check_api_credentials( $value ) {
 		$api_key = trim( (string) $value );
-		$api_url = trim( (string) $this->get_plugin_setting( 'api_url' ) );
-
-		if ( '' === $api_key || '' === $api_url ) {
+		if ( '' === $api_key ) {
 			return null;
 		}
 
-		$client = new \BroadcasterGF\Api\Client( $api_url, $api_key );
+		$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
 		$result = $client->test_connection();
 		return (bool) $result['ok'];
 	}
@@ -322,12 +369,12 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$entry_id = rgar( $entry, 'id' );
 		$feed_id  = rgar( $feed, 'id' );
 
-		$api_url = trim( (string) $this->get_plugin_setting( 'api_url' ) );
 		$api_key = trim( (string) $this->get_plugin_setting( 'api_key' ) );
-		if ( '' === $api_url || '' === $api_key ) {
-			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — Broadcaster API URL or key not configured.', $feed_id ) );
+		if ( '' === $api_key ) {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — Broadcaster API key not configured.', $feed_id ) );
 			return $entry;
 		}
+		$api_url = $this->get_api_url();
 
 		$meta = isset( $feed['meta'] ) && is_array( $feed['meta'] ) ? $feed['meta'] : array();
 
