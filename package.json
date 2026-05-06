@@ -1,21 +1,22 @@
 {
-    "name": "plugin-name",
+    "name": "broadcaster-auto-responder-for-gravity-forms",
     "version": "1.0.0",
-    "description": "WordPress plugin boilerplate",
-    "author": "Your Name",
+    "description": "Sends Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages.",
+    "author": "Fullworks",
     "license": "GPL-2.0-or-later",
     "keywords": [
         "wordpress",
-        "plugin",
-        "boilerplate"
+        "gravity-forms",
+        "broadcaster",
+        "whatsapp"
     ],
-    "homepage": "https://github.com/yourname/plugin-name",
+    "homepage": "https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project",
     "repository": {
         "type": "git",
-        "url": "https://github.com/yourname/plugin-name.git"
+        "url": "https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project.git"
     },
     "bugs": {
-        "url": "https://github.com/yourname/plugin-name/issues"
+        "url": "https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project/issues"
     },
     "scripts": {
         "env:start": "wp-env start --xdebug",
@@ -26,9 +27,9 @@
         "env:logs": "wp-env logs",
         "lint:php": "composer run-script lint",
         "lint:php:fix": "composer run-script lint:fix",
-        "test": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/plugin-name && ./vendor/bin/phpunit'",
-        "test:unit": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/plugin-name && ./vendor/bin/phpunit --testsuite unit'",
-        "test:integration": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/plugin-name && ./vendor/bin/phpunit --testsuite integration'",
+        "test": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/broadcaster-auto-responder-for-gravity-forms && ./vendor/bin/phpunit'",
+        "test:unit": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/broadcaster-auto-responder-for-gravity-forms && ./vendor/bin/phpunit --testsuite unit'",
+        "test:integration": "wp-env run tests-cli 'cd /var/www/html/wp-content/plugins/broadcaster-auto-responder-for-gravity-forms && ./vendor/bin/phpunit --testsuite integration'",
         "build": "composer run-script build",
         "setup": "./bin/setup-plugin.sh",
         "composer:install": "composer install",

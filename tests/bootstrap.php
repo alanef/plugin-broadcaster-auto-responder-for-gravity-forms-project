@@ -2,7 +2,7 @@
 /**
  * PHPUnit bootstrap file
  *
- * @package PluginName
+ * @package BroadcasterGF
  */
 
 // Get the plugin directory.
@@ -32,12 +32,12 @@ require_once $_tests_dir . '/includes/functions.php';
 function _manually_load_plugin() {
 	// Update the path to your plugin's main file.
 	$plugin_dir = dirname( __DIR__ );
-	$plugin_slug = basename( glob( $plugin_dir . '/*/plugin-name.php' )[0] ?? 'plugin-name/plugin-name.php', '.php' );
+	$plugin_slug = basename( glob( $plugin_dir . '/*/broadcaster-auto-responder-for-gravity-forms.php' )[0] ?? 'broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php', '.php' );
 	
 	// Try to find the main plugin file.
 	$possible_files = array(
 		$plugin_dir . '/' . $plugin_slug . '/' . $plugin_slug . '.php',
-		$plugin_dir . '/plugin-name/plugin-name.php',
+		$plugin_dir . '/broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php',
 	);
 	
 	foreach ( $possible_files as $file ) {

@@ -1,6 +1,6 @@
 {
-    "name": "fullworks/plugin-name",
-    "description": "Plugin Name description",
+    "name": "fullworks/broadcaster-auto-responder-for-gravity-forms",
+    "description": "Sends Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
@@ -8,7 +8,7 @@
     },
     "autoload": {
         "classmap": [
-            "."
+            "includes/"
         ]
     },
     "config": {

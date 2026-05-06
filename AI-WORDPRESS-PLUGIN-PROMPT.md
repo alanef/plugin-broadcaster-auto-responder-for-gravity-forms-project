@@ -34,9 +34,9 @@ Search for any remaining template names that should have been replaced:
 
 ```bash
 # These should return NO results (except in documentation/comments)
-grep -r "plugin-name" ./your-plugin/ --exclude-dir=vendor
-grep -r "plugin_name" ./your-plugin/ --exclude-dir=vendor
-grep -r "PLUGIN_NAME" ./your-plugin/ --exclude-dir=vendor
+grep -r "broadcaster-auto-responder-for-gravity-forms" ./your-plugin/ --exclude-dir=vendor
+grep -r "broadcaster_auto_responder_for_gravity_forms" ./your-plugin/ --exclude-dir=vendor
+grep -r "BROADCASTERGF" ./your-plugin/ --exclude-dir=vendor
 ```
 
 ### 4. Text Domain Verification (REQUIRED)
@@ -83,7 +83,7 @@ Plugin should activate without errors.
 ```php
 <?php
 /**
- * Plugin Name:       My Plugin Name
+ * Broadcaster Auto Responder for Gravity Forms:       My Broadcaster Auto Responder for Gravity Forms
  * Plugin URI:        https://example.com/plugins/my-plugin/
  * Description:       Brief description of what the plugin does.
  * Version:           1.0.0
@@ -401,7 +401,7 @@ $wpdb->insert(
 - Any trademarked names
 
 **Acceptable:**
-- "WP Plugin Name" instead of "WordPress Plugin Name"
+- "WP Broadcaster Auto Responder for Gravity Forms" instead of "WordPress Broadcaster Auto Responder for Gravity Forms"
 - "Integration for WooCommerce" instead of "WooCommerce Extension"
 
 ### 10. File Organization
@@ -589,7 +589,7 @@ Before submission, ensure:
 ```php
 <?php
 /**
- * Plugin Name:       My Awesome Plugin
+ * Broadcaster Auto Responder for Gravity Forms:       My Awesome Plugin
  * Plugin URI:        https://example.com/plugins/my-awesome-plugin/
  * Description:       Does awesome things the WordPress way.
  * Version:           1.0.0

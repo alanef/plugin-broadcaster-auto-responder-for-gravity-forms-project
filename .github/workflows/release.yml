@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Extract PHP version
       id: php_version
       run: |
-        PHP_VERSION=$(grep -oP 'Requires PHP:\s*\K[\d.]+' plugin-name/plugin-name.php || echo "7.4")
+        PHP_VERSION=$(grep -oP 'Requires PHP:\s*\K[\d.]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php || echo "7.4")
         echo "version=$PHP_VERSION" >> $GITHUB_OUTPUT
 
     - name: Setup PHP
@@ -39,7 +39,7 @@ jobs:
       run: |
         TAG_VERSION=${GITHUB_REF#refs/tags/}
         TAG_VERSION=${TAG_VERSION#v}
-        PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[0-9a-zA-Z.-]+' plugin-name/plugin-name.php)
+        PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[0-9a-zA-Z.-]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php)
 
         echo "Tag version: $TAG_VERSION"
         echo "Plugin version: $PLUGIN_VERSION"
@@ -59,32 +59,32 @@ jobs:
     - name: Build plugin
       run: |
         # Use WP-CLI to build the plugin archive
-        wp dist-archive ./plugin-name ./plugin-name.zip
+        wp dist-archive ./broadcaster-auto-responder-for-gravity-forms ./broadcaster-auto-responder-for-gravity-forms.zip
         
         # Create dist directory for consistency with build script
         mkdir -p dist
-        mv plugin-name.zip dist/
+        mv broadcaster-auto-responder-for-gravity-forms.zip dist/
         
         # Also rename with version for better release management
-        PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[0-9a-zA-Z.-]+' plugin-name/plugin-name.php)
-        cp dist/plugin-name.zip "dist/plugin-name-${PLUGIN_VERSION}.zip"
+        PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[0-9a-zA-Z.-]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php)
+        cp dist/broadcaster-auto-responder-for-gravity-forms.zip "dist/broadcaster-auto-responder-for-gravity-forms-${PLUGIN_VERSION}.zip"
         
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: dist/*.zip
         body: |
-          Release of Plugin Name v${{ github.ref_name }}
+          Release of Broadcaster Auto Responder for Gravity Forms v${{ github.ref_name }}
           
           ## Installation
-          1. Download `plugin-name.zip` from the assets below
+          1. Download `broadcaster-auto-responder-for-gravity-forms.zip` from the assets below
           2. In WordPress admin, go to Plugins > Add New > Upload Plugin
           3. Choose the downloaded zip file and click Install Now
           4. Activate the plugin
-          5. Configure the plugin in Settings > Plugin Name
+          5. Configure the plugin in Settings > Broadcaster Auto Responder for Gravity Forms
           
           ## Changelog
-          See [readme.txt](plugin-name/readme.txt) for detailed changelog.
+          See [readme.txt](broadcaster-auto-responder-for-gravity-forms/readme.txt) for detailed changelog.
         draft: false
         prerelease: false
       env:

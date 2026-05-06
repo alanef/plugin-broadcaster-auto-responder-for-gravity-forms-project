@@ -12,12 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Extract PHP version
       id: php_version
       run: |
-        PHP_VERSION=$(grep -oP 'Requires PHP:\s*\K[\d.]+' plugin-name/plugin-name.php || echo "7.4")
+        PHP_VERSION=$(grep -oP 'Requires PHP:\s*\K[\d.]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php || echo "7.4")
         echo "version=$PHP_VERSION" >> $GITHUB_OUTPUT
 
     - name: Setup PHP
@@ -49,13 +49,13 @@ jobs:
         if composer show --installed | grep -q "phpcompatibility"; then
           composer run-script phpcompat
         else
-          ./vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 7.4- --extensions=php plugin-name/
+          ./vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 7.4- --extensions=php broadcaster-auto-responder-for-gravity-forms/
         fi
 
     - name: Check version consistency
       run: |
-        PLUGIN_VERSION=$(sed -n 's/ \* Version:\s*\(.*\)/\1/p' plugin-name/plugin-name.php | xargs)
-        CONSTANT_VERSION=$(sed -n "s/.*PLUGIN_NAME_VERSION.*'\(.*\)'.*/\1/p" plugin-name/plugin-name.php | xargs)
+        PLUGIN_VERSION=$(sed -n 's/ \* Version:\s*\(.*\)/\1/p' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php | xargs)
+        CONSTANT_VERSION=$(sed -n "s/.*BROADCASTERGF_VERSION.*'\(.*\)'.*/\1/p" broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php | xargs)
 
         echo "Plugin header version: $PLUGIN_VERSION"
         echo "Version constant: $CONSTANT_VERSION"
@@ -72,9 +72,9 @@ jobs:
       run: |
         composer run-script build
         mkdir tmp-build
-        unzip dist/plugin-name.zip -d tmp-build
+        unzip dist/broadcaster-auto-responder-for-gravity-forms.zip -d tmp-build
 
     - name: WordPress Plugin Check
       uses: wordpress/plugin-check-action@v1
       with:
-        build-dir: 'tmp-build/plugin-name'
+        build-dir: 'tmp-build/broadcaster-auto-responder-for-gravity-forms'
