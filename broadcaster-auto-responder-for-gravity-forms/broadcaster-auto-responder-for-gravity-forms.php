@@ -24,7 +24,6 @@ define( 'BROADCASTERGF_VERSION', '1.0.0' );
 define( 'BROADCASTERGF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BROADCASTERGF_URL', plugin_dir_url( __FILE__ ) );
 define( 'BROADCASTERGF_BASENAME', plugin_basename( __FILE__ ) );
-define( 'BROADCASTERGF_OPTION', 'broadcastergf_settings' );
 
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
@@ -52,19 +51,3 @@ add_action( 'plugins_loaded', 'broadcastergf_bootstrap' );
  */
 require_once __DIR__ . '/includes/gf/class-broadcaster-gf-bootstrap.php';
 add_action( 'gform_loaded', array( 'Broadcaster_GF_Bootstrap', 'load_addon' ), 5 );
-
-/**
- * Activation hook: seed an empty settings option so the row exists.
- */
-function broadcastergf_activate() {
-	if ( false === get_option( BROADCASTERGF_OPTION ) ) {
-		add_option(
-			BROADCASTERGF_OPTION,
-			array(
-				'api_url' => '',
-				'api_key' => '',
-			)
-		);
-	}
-}
-register_activation_hook( __FILE__, 'broadcastergf_activate' );

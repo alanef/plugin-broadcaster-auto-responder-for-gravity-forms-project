@@ -19,6 +19,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class Notices {
 
+	const GF_SETTINGS_PAGE = 'admin.php?page=gf_settings&subview=broadcaster-auto-responder-for-gravity-forms';
+
 	/**
 	 * Wire WordPress hooks.
 	 */
@@ -39,7 +41,7 @@ class Notices {
 			return;
 		}
 
-		if ( ! Plugin::is_configured() ) {
+		if ( ! $this->api_configured() ) {
 			$this->render_not_configured();
 		}
 	}
@@ -53,6 +55,19 @@ class Notices {
 	 */
 	private function gravity_forms_active(): bool {
 		return class_exists( 'GFForms' );
+	}
+
+	/**
+	 * True when both api_url and api_key are saved in the GF add-on settings.
+	 */
+	private function api_configured(): bool {
+		$opt = get_option( Plugin::SETTINGS_OPTION_KEY, array() );
+		if ( ! is_array( $opt ) ) {
+			return false;
+		}
+		$api_url = isset( $opt['api_url'] ) ? trim( (string) $opt['api_url'] ) : '';
+		$api_key = isset( $opt['api_key'] ) ? trim( (string) $opt['api_key'] ) : '';
+		return '' !== $api_url && '' !== $api_key;
 	}
 
 	/**
@@ -70,12 +85,11 @@ class Notices {
 	 * Notice: API not configured.
 	 */
 	private function render_not_configured(): void {
-		$settings_url = admin_url( 'options-general.php?page=' . Settings::PAGE_SLUG );
 		printf(
 			'<div class="notice notice-warning"><p><strong>%s</strong> %s <a href="%s">%s</a></p></div>',
 			esc_html__( 'Broadcaster Auto Responder for Gravity Forms:', 'broadcaster-auto-responder-for-gravity-forms' ),
 			esc_html__( 'Broadcaster API URL or API key is not configured.', 'broadcaster-auto-responder-for-gravity-forms' ),
-			esc_url( $settings_url ),
+			esc_url( admin_url( self::GF_SETTINGS_PAGE ) ),
 			esc_html__( 'Configure now', 'broadcaster-auto-responder-for-gravity-forms' )
 		);
 	}

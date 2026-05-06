@@ -7,16 +7,20 @@
 
 namespace BroadcasterGF;
 
-use BroadcasterGF\Admin\Ajax;
 use BroadcasterGF\Admin\Notices;
-use BroadcasterGF\Admin\Settings;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Plugin singleton: wires up admin pages, notices, and AJAX handlers.
+ * Plugin singleton.
+ *
+ * Settings, AJAX, and the standalone WP options page have moved to the
+ * Gravity Forms plugin-settings tab (see Broadcaster_GF_FeedAddOn::
+ * plugin_settings_fields). This class now only registers admin notices.
  */
 class Plugin {
+
+	const SETTINGS_OPTION_KEY = 'gravityformsaddon_broadcaster-auto-responder-for-gravity-forms_settings';
 
 	/**
 	 * Singleton instance.
@@ -39,33 +43,6 @@ class Plugin {
 	 * Wire WordPress hooks.
 	 */
 	public function register(): void {
-		( new Settings() )->register();
 		( new Notices() )->register();
-		( new Ajax() )->register();
-	}
-
-	/**
-	 * Read the saved settings array.
-	 *
-	 * @return array{api_url:string,api_key:string}
-	 */
-	public static function get_settings(): array {
-		$defaults = array(
-			'api_url' => '',
-			'api_key' => '',
-		);
-		$saved    = get_option( BROADCASTERGF_OPTION, array() );
-		if ( ! is_array( $saved ) ) {
-			$saved = array();
-		}
-		return array_merge( $defaults, $saved );
-	}
-
-	/**
-	 * True when both API URL and API key have been saved.
-	 */
-	public static function is_configured(): bool {
-		$s = self::get_settings();
-		return '' !== $s['api_url'] && '' !== $s['api_key'];
 	}
 }

@@ -122,6 +122,64 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * Plugin-level settings shown under Forms → Settings → Broadcaster.
+	 *
+	 * Mirrors the EmailOctopus add-on layout: API URL + API key with a
+	 * feedback_callback on the key that renders a green tick / red cross
+	 * next to the field whenever the page loads, by hitting Broadcaster's
+	 * /api/v1/messages/incoming with an empty body and reading the auth
+	 * status code.
+	 */
+	public function plugin_settings_fields() {
+		return array(
+			array(
+				'description' => '<p>' . esc_html__( 'Connect this site to your Broadcaster account so Gravity Forms submissions can be injected as incoming WhatsApp contact messages.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</p>',
+				'fields'      => array(
+					array(
+						'name'    => 'api_url',
+						'label'   => esc_html__( 'Broadcaster site URL', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'    => 'text',
+						'class'   => 'medium',
+						'tooltip' => esc_html__( 'Site root only — do not include /api/v1.', 'broadcaster-auto-responder-for-gravity-forms' ),
+					),
+					array(
+						'name'              => 'api_key',
+						'label'             => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'              => 'text',
+						'class'             => 'medium',
+						'tooltip'           => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'feedback_callback' => array( $this, 'check_api_credentials' ),
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Live feedback callback for the API key field.
+	 *
+	 * Returns true when Broadcaster accepts the key, false when it rejects
+	 * it, and null when there's nothing usable to test yet (so GF shows
+	 * no feedback rather than a misleading red cross).
+	 *
+	 * @param string $value The api_key field value being rendered.
+	 *
+	 * @return bool|null
+	 */
+	public function check_api_credentials( $value ) {
+		$api_key = trim( (string) $value );
+		$api_url = trim( (string) $this->get_plugin_setting( 'api_url' ) );
+
+		if ( '' === $api_key || '' === $api_url ) {
+			return null;
+		}
+
+		$client = new \BroadcasterGF\Api\Client( $api_url, $api_key );
+		$result = $client->test_connection();
+		return (bool) $result['ok'];
+	}
+
+	/**
 	 * Build the ghost-text placeholder for the Source label field.
 	 *
 	 * Falls back to 'webform' when no form title is available so the field
@@ -264,8 +322,9 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$entry_id = rgar( $entry, 'id' );
 		$feed_id  = rgar( $feed, 'id' );
 
-		$settings = \BroadcasterGF\Plugin::get_settings();
-		if ( ! \BroadcasterGF\Plugin::is_configured() ) {
+		$api_url = trim( (string) $this->get_plugin_setting( 'api_url' ) );
+		$api_key = trim( (string) $this->get_plugin_setting( 'api_key' ) );
+		if ( '' === $api_url || '' === $api_key ) {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — Broadcaster API URL or key not configured.', $feed_id ) );
 			return $entry;
 		}
@@ -336,7 +395,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
 
-		$client = new \BroadcasterGF\Api\Client( $settings['api_url'], $settings['api_key'] );
+		$client = new \BroadcasterGF\Api\Client( $api_url, $api_key );
 		$result = $client->send_incoming_message( $payload );
 
 		if ( $result['ok'] ) {
