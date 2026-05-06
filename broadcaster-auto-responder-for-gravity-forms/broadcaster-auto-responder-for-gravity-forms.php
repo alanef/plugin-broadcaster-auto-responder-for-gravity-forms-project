@@ -31,7 +31,7 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 }
 
 /**
- * Bootstrap the plugin.
+ * Bootstrap the namespaced admin/API classes (settings page, notices, AJAX).
  */
 function broadcastergf_bootstrap() {
 	if ( ! class_exists( '\\BroadcasterGF\\Plugin' ) ) {
@@ -40,6 +40,18 @@ function broadcastergf_bootstrap() {
 	\BroadcasterGF\Plugin::instance()->register();
 }
 add_action( 'plugins_loaded', 'broadcastergf_bootstrap' );
+
+/*
+ * Gravity Forms Feed Add-On registration.
+ *
+ * MUST run at file scope, BEFORE plugins_loaded executes — Gravity Forms fires
+ * gform_loaded during its own plugins_loaded handler, so any add_action() for
+ * gform_loaded that runs from inside another plugins_loaded callback may be
+ * registered after gform_loaded has already fired and never execute. The
+ * EmailOctopus add-on uses this same file-scope pattern for the same reason.
+ */
+require_once __DIR__ . '/includes/gf/class-broadcaster-gf-bootstrap.php';
+add_action( 'gform_loaded', array( 'Broadcaster_GF_Bootstrap', 'load_addon' ), 5 );
 
 /**
  * Activation hook: seed an empty settings option so the row exists.

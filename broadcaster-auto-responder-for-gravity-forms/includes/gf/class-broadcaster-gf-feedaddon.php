@@ -1,35 +1,37 @@
 <?php
 /**
- * Gravity Forms Feed Add-On registration and configuration UI.
+ * Broadcaster Gravity Forms Feed Add-On.
  *
- * @package BroadcasterGF
- */
-
-namespace BroadcasterGF\Gf;
-
-defined( 'ABSPATH' ) || exit;
-
-/**
- * Broadcaster delivery as a Gravity Forms feed.
+ * Mirrors the Gravity Forms EmailOctopus add-on pattern: a global (un-namespaced)
+ * subclass of GFFeedAddOn registered via GFAddOn::register() at gform_loaded.
+ * The framework include happens at file scope so the parent class is already
+ * loaded by the time this class definition is parsed.
  *
  * BRO-881 ships only the configuration UI: settings schema, list columns, and
  * placeholder/recipient validation. Submission dispatch (process_feed) is a
  * deliberate no-op here and is filled in by BRO-882, which will use
  * BroadcasterGF\Api\Client to post to /api/v1/messages/incoming.
  *
- * Lifecycle: registered via GFAddOn::register() from BroadcasterGF\Plugin
- * once gform_loaded fires.
+ * @package BroadcasterGF
  */
-class FeedAddOn extends \GFFeedAddOn {
+
+defined( 'ABSPATH' ) || exit;
+
+\GFForms::include_feed_addon_framework();
+
+/**
+ * Broadcaster delivery as a Gravity Forms feed.
+ */
+class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 	// phpcs:disable PSR2.Classes.PropertyDeclaration.Underscore -- GFFeedAddOn requires underscore-prefixed framework properties.
 
 	/**
-	 * Plugin version (mirrors BROADCASTERGF_VERSION).
+	 * Plugin version.
 	 *
 	 * @var string
 	 */
-	protected $_version;
+	protected $_version = BROADCASTERGF_VERSION;
 
 	/**
 	 * Minimum supported Gravity Forms version.
@@ -39,53 +41,60 @@ class FeedAddOn extends \GFFeedAddOn {
 	protected $_min_gravityforms_version = '2.5';
 
 	/**
-	 * Add-on slug — must match plugin slug for GF to find feed pages.
+	 * Add-on slug — must match plugin slug.
 	 *
 	 * @var string
 	 */
 	protected $_slug = 'broadcaster-auto-responder-for-gravity-forms';
 
 	/**
-	 * Plugin basename.
+	 * Plugin file path relative to the plugins directory.
 	 *
 	 * @var string
 	 */
-	protected $_path;
+	protected $_path = 'broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php';
 
 	/**
-	 * Full plugin file path.
+	 * Full path to this class file.
 	 *
 	 * @var string
 	 */
-	protected $_full_path;
+	protected $_full_path = __FILE__;
+
+	/**
+	 * Add-on website.
+	 *
+	 * @var string
+	 */
+	protected $_url = 'https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project';
 
 	/**
 	 * Display title.
 	 *
 	 * @var string
 	 */
-	protected $_title;
+	protected $_title = 'Broadcaster Auto Responder for Gravity Forms';
 
 	/**
-	 * Short title shown in the GF feed list tabs.
+	 * Short title shown in the GF feed list tabs and sidebar.
 	 *
 	 * @var string
 	 */
-	protected $_short_title;
+	protected $_short_title = 'Broadcaster';
 
 	// phpcs:enable PSR2.Classes.PropertyDeclaration.Underscore
 
 	/**
-	 * Singleton.
+	 * Singleton instance.
 	 *
-	 * @var FeedAddOn|null
+	 * @var Broadcaster_GF_FeedAddOn|null
 	 */
 	private static $instance = null;
 
 	/**
 	 * Singleton accessor (GFAddOn pattern).
 	 */
-	public static function get_instance(): FeedAddOn {
+	public static function get_instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
@@ -93,15 +102,14 @@ class FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
-	 * Constructor — populate fields that need runtime constants.
+	 * Provide the SVG icon shown in the GF sidebar nav for this add-on.
 	 */
-	public function __construct() {
-		$this->_version     = defined( 'BROADCASTERGF_VERSION' ) ? BROADCASTERGF_VERSION : '1.0.0';
-		$this->_path        = defined( 'BROADCASTERGF_BASENAME' ) ? BROADCASTERGF_BASENAME : '';
-		$this->_full_path   = defined( 'BROADCASTERGF_PATH' ) ? BROADCASTERGF_PATH . 'broadcaster-auto-responder-for-gravity-forms.php' : __FILE__;
-		$this->_title       = esc_html__( 'Broadcaster Auto Responder for Gravity Forms', 'broadcaster-auto-responder-for-gravity-forms' );
-		$this->_short_title = esc_html__( 'Broadcaster GF', 'broadcaster-auto-responder-for-gravity-forms' );
-		parent::__construct();
+	public function get_menu_icon() {
+		$svg = $this->get_base_path() . '/../../images/menu-icon.svg';
+		if ( file_exists( $svg ) ) {
+			return file_get_contents( $svg ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		}
+		return parent::get_menu_icon();
 	}
 
 	/**
@@ -196,7 +204,7 @@ class FeedAddOn extends \GFFeedAddOn {
 						'type'    => 'text',
 						'name'    => 'test_recipient',
 						'class'   => 'medium',
-						'tooltip' => esc_html__( 'Phone number to receive a live feed test. The test button itself is added in BRO-882.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'tooltip' => esc_html__( 'Phone number to receive a live feed test. The test trigger ships with BRO-882.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 				),
 			),
@@ -286,8 +294,8 @@ class FeedAddOn extends \GFFeedAddOn {
 	 * @param array  $field Field config.
 	 * @param string $value Submitted value.
 	 */
-	private function validate_placeholder_field( $field, string $value ): void {
-		$result = self::parse_placeholders( $value );
+	private function validate_placeholder_field( $field, $value ) {
+		$result = self::parse_placeholders( (string) $value );
 		if ( ! $result['ok'] ) {
 			$this->set_field_error( $field, $result['error'] );
 		}
@@ -296,19 +304,14 @@ class FeedAddOn extends \GFFeedAddOn {
 	/**
 	 * Parse a "key1:value1,key2:value2" string into an associative array.
 	 *
-	 * - Keys and values are trimmed.
-	 * - Empty input returns an empty array.
-	 * - Missing colon, empty key, or duplicate key fail with a descriptive error.
-	 * - Values may contain Gravity Forms merge tags; this parser does not render them.
-	 *
-	 * Made static + public so BRO-882 dispatch can reuse the same parser when
-	 * building the API payload, guaranteeing identical semantics on save and on send.
+	 * Static + public so the BRO-882 dispatch path can reuse the same parser
+	 * when building the API payload — same rules at save and at send.
 	 *
 	 * @param string $raw Raw textarea content.
 	 * @return array{ok:bool,value:array<string,string>,error:string|null}
 	 */
-	public static function parse_placeholders( string $raw ): array {
-		$raw = trim( $raw );
+	public static function parse_placeholders( $raw ) {
+		$raw = trim( (string) $raw );
 		if ( '' === $raw ) {
 			return array(
 				'ok'    => true,

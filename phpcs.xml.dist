@@ -49,6 +49,7 @@
                 <element value="broadcastergf"/>
                 <element value="BROADCASTERGF"/>
                 <element value="BroadcasterGF"/>
+                <element value="Broadcaster_GF"/>
             </property>
         </properties>
     </rule>
