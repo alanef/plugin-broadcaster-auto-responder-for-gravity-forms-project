@@ -137,6 +137,13 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'required' => true,
 					),
 					array(
+						'label'   => esc_html__( 'Source label', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'    => 'text',
+						'name'    => 'source_label',
+						'class'   => 'medium',
+						'tooltip' => esc_html__( 'Shown in Broadcaster chat bubbles to identify where the message came from. Leave blank to use the form name.', 'broadcaster-auto-responder-for-gravity-forms' ),
+					),
+					array(
 						'label'   => esc_html__( 'Phone field', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'    => 'field_select',
 						'name'    => 'phone_field',
@@ -263,9 +270,17 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 		$message = $this->render_merge_tags( rgar( $meta, 'message_text', '' ), $form, $entry );
 
+		$source_label = trim( (string) rgar( $meta, 'source_label' ) );
+		if ( '' === $source_label ) {
+			$source_label = trim( (string) rgar( $form, 'title' ) );
+		}
+		if ( '' === $source_label ) {
+			$source_label = 'webform';
+		}
+
 		$payload = array(
 			'message'          => $message,
-			'source'           => 'broadcaster-auto-responder-for-gravity-forms',
+			'source'           => $source_label,
 			'form_id'          => (string) rgar( $form, 'id' ),
 			'form_name'        => rgar( $form, 'title' ),
 			'source_reference' => sprintf( 'gf-form-%d-entry-%s', (int) rgar( $form, 'id' ), $entry_id ),
