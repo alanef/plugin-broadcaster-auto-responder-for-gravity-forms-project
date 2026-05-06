@@ -206,18 +206,6 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 				),
 			),
 			array(
-				'title'  => esc_html__( 'Live test', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'fields' => array(
-					array(
-						'label'   => esc_html__( 'Test recipient (E.164 phone)', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'text',
-						'name'    => 'test_recipient',
-						'class'   => 'medium',
-						'tooltip' => esc_html__( 'Phone number to receive a live feed test. The test trigger ships with BRO-882.', 'broadcaster-auto-responder-for-gravity-forms' ),
-					),
-				),
-			),
-			array(
 				'title'  => esc_html__( 'Conditional logic', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields' => array(
 					array(
