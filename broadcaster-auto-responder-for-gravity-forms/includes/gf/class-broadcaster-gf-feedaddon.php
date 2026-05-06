@@ -127,6 +127,17 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	const LIVE_SAAS_URL = 'https://getbroadcaster.com';
 
 	/**
+	 * Per-request cache for the connection test result.
+	 *
+	 * `feedback_callback` (the inline tick/cross) and the explicit status
+	 * line below the key both want the same answer; caching means a single
+	 * round-trip to Broadcaster per settings-page render.
+	 *
+	 * @var array|null|false  null = test ran with no result, false = not yet tested.
+	 */
+	private $connection_test_cache = false;
+
+	/**
 	 * Resolve the Broadcaster URL the plugin should call.
 	 *
 	 * In a production environment we always hit the live SaaS — site
@@ -173,6 +184,12 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			'feedback_callback' => array( $this, 'check_api_credentials' ),
 		);
 
+		$status_field = array(
+			'name' => 'connection_status',
+			'type' => 'html',
+			'html' => $this->render_connection_status(),
+		);
+
 		if ( $this->is_production() ) {
 			return array(
 				array(
@@ -181,7 +198,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						esc_html__( 'This site is running in production and connects to Broadcaster at %s.', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'<code>' . esc_html( self::LIVE_SAAS_URL ) . '</code>'
 					) . '</p>',
-					'fields'      => array( $api_key_field ),
+					'fields'      => array( $api_key_field, $status_field ),
 				),
 			);
 		}
@@ -199,6 +216,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'tooltip'       => esc_html__( 'Override only when testing against a dev or staging Broadcaster. Site root only — do not include /api/v1. Production sites always use the live SaaS regardless of this value.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					$api_key_field,
+					$status_field,
 				),
 			),
 		);
@@ -216,14 +234,65 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 * @return bool|null
 	 */
 	public function check_api_credentials( $value ) {
-		$api_key = trim( (string) $value );
+		$result = $this->run_connection_test( (string) $value );
+		if ( null === $result ) {
+			return null;
+		}
+		return (bool) $result['ok'];
+	}
+
+	/**
+	 * Run the connection test once per request, caching the result so the
+	 * feedback indicator and the status line below the key share one call.
+	 *
+	 * @param string|null $value The api_key being rendered. When null, falls
+	 *                           back to the saved value.
+	 *
+	 * @return array{ok:bool,message:string,http_code:int|null}|null
+	 *               Null when there is no key to test.
+	 */
+	private function run_connection_test( $value = null ): ?array {
+		if ( false !== $this->connection_test_cache ) {
+			return $this->connection_test_cache;
+		}
+
+		$api_key = null === $value
+			? trim( (string) $this->get_plugin_setting( 'api_key' ) )
+			: trim( (string) $value );
+
 		if ( '' === $api_key ) {
+			$this->connection_test_cache = null;
 			return null;
 		}
 
-		$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
-		$result = $client->test_connection();
-		return (bool) $result['ok'];
+		$client                      = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
+		$this->connection_test_cache = $client->test_connection();
+		return $this->connection_test_cache;
+	}
+
+	/**
+	 * Build the explanatory status line shown below the API key field.
+	 *
+	 * Empty when no key is saved (the field-level tick already covers it
+	 * once a key is entered).
+	 */
+	private function render_connection_status(): string {
+		$result = $this->run_connection_test();
+		if ( null === $result ) {
+			return '';
+		}
+		if ( $result['ok'] ) {
+			return '<p style="margin:6px 0 0;color:#1e7e34;"><strong>'
+				. esc_html__( '✓ Connected.', 'broadcaster-auto-responder-for-gravity-forms' )
+				. '</strong> '
+				. esc_html__( 'Broadcaster accepted the API key.', 'broadcaster-auto-responder-for-gravity-forms' )
+				. '</p>';
+		}
+		return '<p style="margin:6px 0 0;color:#b32d2e;"><strong>'
+			. esc_html__( '✗ Not connected.', 'broadcaster-auto-responder-for-gravity-forms' )
+			. '</strong> '
+			. esc_html( $result['message'] )
+			. '</p>';
 	}
 
 	/**
