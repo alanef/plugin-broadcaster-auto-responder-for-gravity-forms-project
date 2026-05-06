@@ -149,11 +149,12 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'required' => true,
 					),
 					array(
-						'label'   => esc_html__( 'Source label', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'text',
-						'name'    => 'source_label',
-						'class'   => 'medium',
-						'tooltip' => esc_html__( 'Shown in Broadcaster chat bubbles to identify where the message came from. Leave blank to use the form name.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'       => esc_html__( 'Source label', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'        => 'text',
+						'name'        => 'source_label',
+						'class'       => 'medium',
+						'placeholder' => $this->source_label_placeholder(),
+						'tooltip'     => esc_html__( 'Shown in Broadcaster chat bubbles to identify where the message came from. Leave blank to use the form name.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
 						'label'   => esc_html__( 'Phone field', 'broadcaster-auto-responder-for-gravity-forms' ),
