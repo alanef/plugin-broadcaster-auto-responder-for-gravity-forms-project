@@ -266,7 +266,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$payload = array(
 			'message'          => $message,
 			'source'           => 'broadcaster-auto-responder-for-gravity-forms',
-			'form_id'          => (int) rgar( $form, 'id' ),
+			'form_id'          => (string) rgar( $form, 'id' ),
 			'form_name'        => rgar( $form, 'title' ),
 			'source_reference' => sprintf( 'gf-form-%d-entry-%s', (int) rgar( $form, 'id' ), $entry_id ),
 		);
