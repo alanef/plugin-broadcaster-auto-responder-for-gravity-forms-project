@@ -1,11 +1,11 @@
 # Plugin Renaming Guide
 
-This guide explains how to properly rename `plugin-name` to your actual plugin name in all the correct places. Following these steps ensures consistency and prevents issues.
+This guide explains how to properly rename `broadcaster-auto-responder-for-gravity-forms` to your actual plugin name in all the correct places. Following these steps ensures consistency and prevents issues.
 
 ## Prerequisites
 
 Before starting, decide on:
-- **Plugin Name**: Human-readable name (e.g., "My Awesome Plugin")
+- **Broadcaster Auto Responder for Gravity Forms**: Human-readable name (e.g., "My Awesome Plugin")
 - **Plugin Slug**: Lowercase, hyphenated (e.g., "my-awesome-plugin")
 - **Text Domain**: Usually same as slug (e.g., "my-awesome-plugin")
 - **Prefix**: Unique prefix for functions/constants (e.g., "myawesomeplugin" or "map")
@@ -27,12 +27,12 @@ If you need to rename manually or fix issues after automated setup, follow this 
 
 ### 1. Directory and File Names
 
-- [ ] Rename `plugin-name/` directory to `your-plugin-slug/`
-- [ ] Rename `plugin-name/plugin-name.php` to `your-plugin-slug/your-plugin-slug.php`
+- [ ] Rename `broadcaster-auto-responder-for-gravity-forms/` directory to `your-plugin-slug/`
+- [ ] Rename `broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php` to `your-plugin-slug/your-plugin-slug.php`
 
 ```bash
-mv plugin-name my-awesome-plugin
-mv my-awesome-plugin/plugin-name.php my-awesome-plugin/my-awesome-plugin.php
+mv broadcaster-auto-responder-for-gravity-forms my-awesome-plugin
+mv my-awesome-plugin/broadcaster-auto-responder-for-gravity-forms.php my-awesome-plugin/my-awesome-plugin.php
 ```
 
 ### 2. Plugin Header (`your-plugin-slug.php`)
@@ -41,7 +41,7 @@ Edit the main plugin file header:
 
 ```php
 /**
- * Plugin Name:       My Awesome Plugin
+ * Broadcaster Auto Responder for Gravity Forms:       My Awesome Plugin
  * Plugin URI:        https://example.com/plugins/my-awesome-plugin/
  * Description:       Your plugin description
  * Version:           1.0.0
@@ -64,8 +64,8 @@ Replace these constants throughout the plugin:
 
 **Before:**
 ```php
-define( 'PLUGIN_NAME_VERSION', '1.0.0' );
-define( 'PLUGIN_NAME_PATH', plugin_dir_path( __FILE__ ) );
+define( 'BROADCASTERGF_VERSION', '1.0.0' );
+define( 'BROADCASTERGF_PATH', plugin_dir_path( __FILE__ ) );
 ```
 
 **After:**
@@ -84,8 +84,8 @@ All global functions must have a unique prefix (minimum 4 characters):
 
 **Before:**
 ```php
-function plugin_name_init() {
-function plugin_name_activate() {
+function broadcaster_auto_responder_for_gravity_forms_init() {
+function broadcaster_auto_responder_for_gravity_forms_activate() {
 ```
 
 **After:**
@@ -103,7 +103,7 @@ function myawesomeplugin_activate() {
 
 **Before:**
 ```php
-namespace PluginName;
+namespace BroadcasterAutoResponderforGravityForms;
 class Plugin_Name {
 ```
 
@@ -119,9 +119,9 @@ Replace in ALL translation functions:
 
 **Before:**
 ```php
-__( 'Text', 'plugin-name' )
-_e( 'Text', 'plugin-name' )
-esc_html__( 'Text', 'plugin-name' )
+__( 'Text', 'broadcaster-auto-responder-for-gravity-forms' )
+_e( 'Text', 'broadcaster-auto-responder-for-gravity-forms' )
+esc_html__( 'Text', 'broadcaster-auto-responder-for-gravity-forms' )
 ```
 
 **After:**
@@ -222,7 +222,7 @@ If you have GitHub workflows, update:
 ```yaml
 env:
   PLUGIN_SLUG: my-awesome-plugin
-  PLUGIN_NAME: "My Awesome Plugin"
+  BROADCASTERGF: "My Awesome Plugin"
 ```
 
 ## Verification Checklist
@@ -250,17 +250,17 @@ Then manually fix remaining issues.
 Search for remaining instances of old names:
 
 ```bash
-# Search for plugin-name
-grep -r "plugin-name" ./my-awesome-plugin/ --exclude-dir=vendor
+# Search for broadcaster-auto-responder-for-gravity-forms
+grep -r "broadcaster-auto-responder-for-gravity-forms" ./my-awesome-plugin/ --exclude-dir=vendor
 
-# Search for plugin_name
-grep -r "plugin_name" ./my-awesome-plugin/ --exclude-dir=vendor
+# Search for broadcaster_auto_responder_for_gravity_forms
+grep -r "broadcaster_auto_responder_for_gravity_forms" ./my-awesome-plugin/ --exclude-dir=vendor
 
-# Search for PLUGIN_NAME
-grep -r "PLUGIN_NAME" ./my-awesome-plugin/ --exclude-dir=vendor
+# Search for BROADCASTERGF
+grep -r "BROADCASTERGF" ./my-awesome-plugin/ --exclude-dir=vendor
 
-# Search for PluginName
-grep -r "PluginName" ./my-awesome-plugin/ --exclude-dir=vendor
+# Search for BroadcasterAutoResponderforGravityForms
+grep -r "BroadcasterAutoResponderforGravityForms" ./my-awesome-plugin/ --exclude-dir=vendor
 ```
 
 Should return NO results (except in comments/documentation).

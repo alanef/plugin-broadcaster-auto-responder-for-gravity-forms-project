@@ -1,6 +1,6 @@
 {
     "plugins": [
-        "./plugin-name"
+        "./broadcaster-auto-responder-for-gravity-forms"
     ],
     "config": {
         "WP_DEBUG": true,
@@ -12,7 +12,7 @@
     "env": {
         "tests": {
             "plugins": [
-                "./plugin-name"
+                "./broadcaster-auto-responder-for-gravity-forms"
             ],
             "port": 8889,
             "config": {

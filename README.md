@@ -20,7 +20,7 @@ A modern, comprehensive WordPress plugin boilerplate with built-in support for m
 2. Clone your new repository
 3. Run the setup script:
    ```bash
-   ./bin/setup-plugin.sh "Your Plugin Name" "your-plugin-slug"
+   ./bin/setup-plugin.sh "Your Broadcaster Auto Responder for Gravity Forms" "your-plugin-slug"
    ```
 4. Install dependencies:
    ```bash
@@ -63,8 +63,8 @@ wordpress-plugin-boilerplate/
 │   │   ├── release.yml           # Automated release builds with quality checks
 │   │   └── *.yml.example          # Optional deployment workflows
 │   └── ISSUE_TEMPLATE/            # Issue templates
-├── plugin-name/                   # Main plugin directory
-│   ├── plugin-name.php            # Main plugin file
+├── broadcaster-auto-responder-for-gravity-forms/                   # Main plugin directory
+│   ├── broadcaster-auto-responder-for-gravity-forms.php            # Main plugin file
 │   ├── readme.txt                 # WordPress.org readme
 │   ├── uninstall.php              # Cleanup on uninstall
 │   └── .distignore                # Build exclusions
