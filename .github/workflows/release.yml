@@ -53,6 +53,14 @@ jobs:
       run: |
         composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
 
+    - name: Install plugin runtime dependencies
+      # The plugin's BroadcasterGF\* classes are autoloaded via the plugin's
+      # own composer.json (classmap of includes/). Without running composer
+      # install inside the plugin folder, vendor/autoload.php is never
+      # generated and the dist zip ships without it — fatal on real WP
+      # installs (broke v1.0.0 and v1.0.1 in production).
+      run: composer install --prefer-dist --no-progress --no-dev --optimize-autoloader --working-dir=broadcaster-auto-responder-for-gravity-forms
+
     - name: Install WP-CLI dist-archive command
       run: wp package install wp-cli/dist-archive-command:v3.1.0
 
