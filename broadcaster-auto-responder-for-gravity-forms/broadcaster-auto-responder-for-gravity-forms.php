@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Broadcaster Auto Responder for Gravity Forms
- * Plugin URI:        https://github.com/alanef/broadcaster-auto-responder-for-gravity-forms
+ * Plugin URI:        https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project
  * Description:       Sends Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages and triggers an optional template auto-response.
  * Version:           1.0.0
  * Requires at least: 5.8
