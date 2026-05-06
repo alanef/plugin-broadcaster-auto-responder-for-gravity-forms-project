@@ -230,16 +230,159 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
-	 * Submission dispatch is implemented by BRO-882. For BRO-881 this is a
-	 * deliberate no-op so saved feeds run safely without throwing.
+	 * Send the entry to Broadcaster /api/v1/messages/incoming.
+	 *
+	 * Conditional logic is evaluated by the framework before this runs.
+	 * Failures are logged but never block the form: we always return the
+	 * entry so Gravity Forms confirmation and notifications proceed.
 	 *
 	 * @param array $feed  Feed configuration.
 	 * @param array $entry Form entry.
 	 * @param array $form  Form definition.
 	 */
 	public function process_feed( $feed, $entry, $form ) {
-		$this->log_debug( __METHOD__ . '(): dispatch reserved for BRO-882.' );
+		$entry_id = rgar( $entry, 'id' );
+		$feed_id  = rgar( $feed, 'id' );
+
+		$settings = \BroadcasterGF\Plugin::get_settings();
+		if ( ! \BroadcasterGF\Plugin::is_configured() ) {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — Broadcaster API URL or key not configured.', $feed_id ) );
+			return $entry;
+		}
+
+		$meta = isset( $feed['meta'] ) && is_array( $feed['meta'] ) ? $feed['meta'] : array();
+
+		$phone    = $this->resolve_field_value( $form, $entry, rgar( $meta, 'phone_field' ) );
+		$username = $this->resolve_field_value( $form, $entry, rgar( $meta, 'whatsapp_username_field' ) );
+		$name     = $this->resolve_field_value( $form, $entry, rgar( $meta, 'submitter_name_field' ) );
+
+		if ( '' === $phone && '' === $username ) {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — neither phone nor WhatsApp username resolved from entry %s.', $feed_id, $entry_id ) );
+			return $entry;
+		}
+
+		$message = $this->render_merge_tags( rgar( $meta, 'message_text', '' ), $form, $entry );
+
+		$payload = array(
+			'message'          => $message,
+			'source'           => 'broadcaster-auto-responder-for-gravity-forms',
+			'form_id'          => (int) rgar( $form, 'id' ),
+			'form_name'        => rgar( $form, 'title' ),
+			'source_reference' => sprintf( 'gf-form-%d-entry-%s', (int) rgar( $form, 'id' ), $entry_id ),
+		);
+
+		if ( '' !== $phone ) {
+			$payload['phone'] = $phone;
+		}
+		if ( '' !== $username ) {
+			$payload['whatsapp_username'] = $username;
+		}
+		if ( '' !== $name ) {
+			$payload['submitter_name'] = $name;
+		}
+
+		$in_hours_template     = trim( (string) rgar( $meta, 'in_hours_template_name' ) );
+		$out_of_hours_template = trim( (string) rgar( $meta, 'out_of_hours_template_name' ) );
+
+		if ( '' !== $in_hours_template ) {
+			$payload['in_hours_template_name']         = $in_hours_template;
+			$payload['in_hours_template_placeholders'] = $this->build_template_placeholders(
+				rgar( $meta, 'in_hours_template_placeholders', '' ),
+				$form,
+				$entry,
+				$feed_id,
+				'in_hours'
+			);
+		}
+
+		if ( '' !== $out_of_hours_template ) {
+			$payload['out_of_hours_template_name']         = $out_of_hours_template;
+			$payload['out_of_hours_template_placeholders'] = $this->build_template_placeholders(
+				rgar( $meta, 'out_of_hours_template_placeholders', '' ),
+				$form,
+				$entry,
+				$feed_id,
+				'out_of_hours'
+			);
+		}
+
+		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
+
+		$client = new \BroadcasterGF\Api\Client( $settings['api_url'], $settings['api_key'] );
+		$result = $client->send_incoming_message( $payload );
+
+		if ( $result['ok'] ) {
+			$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster accepted entry %s (HTTP %d).', $feed_id, $entry_id, (int) $result['http_code'] ) );
+		} else {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s — Broadcaster dispatch failed for entry %s: %s', $feed_id, $entry_id, $result['message'] ) );
+		}
+
 		return $entry;
+	}
+
+	/**
+	 * Read a mapped form field value from an entry, returning '' when the
+	 * mapping is empty or the entry has no value at that field id.
+	 *
+	 * @param array  $form     The form.
+	 * @param array  $entry    The entry.
+	 * @param string $field_id GF field id (may be a sub-field like "1.3").
+	 *
+	 * @return string
+	 */
+	private function resolve_field_value( $form, $entry, $field_id ): string {
+		$field_id = (string) $field_id;
+		if ( '' === $field_id ) {
+			return '';
+		}
+		$value = $this->get_field_value( $form, $entry, $field_id );
+		return is_string( $value ) ? trim( $value ) : '';
+	}
+
+	/**
+	 * Render Gravity Forms merge tags inside arbitrary text.
+	 *
+	 * @param string $text The raw text from feed config.
+	 * @param array  $form The form.
+	 * @param array  $entry The entry.
+	 *
+	 * @return string
+	 */
+	private function render_merge_tags( $text, $form, $entry ): string {
+		if ( ! is_string( $text ) || '' === $text ) {
+			return '';
+		}
+		if ( ! class_exists( '\\GFCommon' ) ) {
+			return $text;
+		}
+		return (string) \GFCommon::replace_variables( $text, $form, $entry, false, false, false, 'text' );
+	}
+
+	/**
+	 * Parse a placeholder textarea string and render merge tags inside each
+	 * value. Parse errors fall back to an empty map so dispatch doesn't fail
+	 * mid-flight — the same string was already validated when the feed was
+	 * saved (parse_placeholders).
+	 *
+	 * @param string $raw     Raw textarea content.
+	 * @param array  $form    The form.
+	 * @param array  $entry   The entry.
+	 * @param string $feed_id Feed id (for error logging).
+	 * @param string $slot    'in_hours' or 'out_of_hours' (for error logging).
+	 *
+	 * @return array<string,string>
+	 */
+	private function build_template_placeholders( $raw, $form, $entry, $feed_id, $slot ): array {
+		$parsed = self::parse_placeholders( (string) $raw );
+		if ( ! $parsed['ok'] ) {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s %s placeholders failed to parse at dispatch (was: %s)', $feed_id, $slot, $parsed['error'] ) );
+			return array();
+		}
+		$rendered = array();
+		foreach ( $parsed['value'] as $key => $value ) {
+			$rendered[ $key ] = $this->render_merge_tags( $value, $form, $entry );
+		}
+		return $rendered;
 	}
 
 	/**

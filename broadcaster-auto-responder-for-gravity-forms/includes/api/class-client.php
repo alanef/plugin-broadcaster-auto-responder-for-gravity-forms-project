@@ -11,9 +11,6 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Thin wrapper around wp_remote_* for talking to a Broadcaster instance.
- *
- * BRO-880 ships only the connection-test method. Submission dispatch
- * (POST /api/v1/messages/incoming with a real payload) is added in BRO-882.
  */
 class Client {
 
@@ -116,6 +113,82 @@ class Client {
 				$code
 			),
 			'http_code' => $code,
+		);
+	}
+
+	/**
+	 * Send an incoming-message payload to /api/v1/messages/incoming.
+	 *
+	 * The plugin assumes Broadcaster has already validated this payload
+	 * shape (BRO-883). Empty values are NOT stripped here — pass only the
+	 * keys you want sent.
+	 *
+	 * @param array $payload Payload matching the BRO-883 contract.
+	 *
+	 * @return array{ok:bool,http_code:int|null,message:string,response:array|null}
+	 */
+	public function send_incoming_message( array $payload ): array {
+		$endpoint = $this->base_url . '/api/v1/messages/incoming';
+
+		$response = wp_remote_post(
+			$endpoint,
+			array(
+				'timeout' => 15,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $this->api_key,
+					'Accept'        => 'application/json',
+					'Content-Type'  => 'application/json',
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'ok'        => false,
+				'http_code' => null,
+				'message'   => sprintf(
+					/* translators: %s: low-level transport error message */
+					__( 'Transport error contacting Broadcaster: %s', 'broadcaster-auto-responder-for-gravity-forms' ),
+					$response->get_error_message()
+				),
+				'response'  => null,
+			);
+		}
+
+		$code        = (int) wp_remote_retrieve_response_code( $response );
+		$body_string = (string) wp_remote_retrieve_body( $response );
+		$decoded     = json_decode( $body_string, true );
+		$body        = is_array( $decoded ) ? $decoded : null;
+
+		if ( $code >= 200 && $code < 300 ) {
+			return array(
+				'ok'        => true,
+				'http_code' => $code,
+				'message'   => __( 'Broadcaster accepted the message.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'response'  => $body,
+			);
+		}
+
+		$detail = '';
+		if ( is_array( $body ) ) {
+			if ( isset( $body['message'] ) && is_string( $body['message'] ) ) {
+				$detail = $body['message'];
+			} elseif ( isset( $body['error'] ) && is_string( $body['error'] ) ) {
+				$detail = $body['error'];
+			}
+		}
+
+		return array(
+			'ok'        => false,
+			'http_code' => $code,
+			'message'   => sprintf(
+				/* translators: 1: HTTP status code, 2: detail message from Broadcaster */
+				__( 'Broadcaster rejected the message (HTTP %1$d). %2$s', 'broadcaster-auto-responder-for-gravity-forms' ),
+				$code,
+				$detail
+			),
+			'response'  => $body,
 		);
 	}
 }
