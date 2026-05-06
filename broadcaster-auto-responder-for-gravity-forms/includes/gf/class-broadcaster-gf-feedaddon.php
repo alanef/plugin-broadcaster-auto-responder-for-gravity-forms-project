@@ -55,11 +55,16 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	protected $_path = 'broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php';
 
 	/**
-	 * Full path to this class file.
+	 * Full path to the main plugin file.
+	 *
+	 * GFAddOn::get_base_path() does basename(dirname($_full_path)) and
+	 * concatenates that to WP_PLUGIN_DIR — so $_full_path must live in the
+	 * plugin's root directory, not in includes/gf/. Set in the constructor
+	 * because property defaults can't reference runtime constants.
 	 *
 	 * @var string
 	 */
-	protected $_full_path = __FILE__;
+	protected $_full_path;
 
 	/**
 	 * Add-on website.
@@ -102,14 +107,18 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * Resolve runtime paths and let GFFeedAddOn finish initialising.
+	 */
+	public function __construct() {
+		$this->_full_path = BROADCASTERGF_PATH . 'broadcaster-auto-responder-for-gravity-forms.php';
+		parent::__construct();
+	}
+
+	/**
 	 * Provide the SVG icon shown in the GF sidebar nav for this add-on.
 	 */
 	public function get_menu_icon() {
-		$svg = $this->get_base_path() . '/../../images/menu-icon.svg';
-		if ( file_exists( $svg ) ) {
-			return file_get_contents( $svg ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-		}
-		return parent::get_menu_icon();
+		return file_get_contents( $this->get_base_path() . '/images/menu-icon.svg' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 	}
 
 	/**
