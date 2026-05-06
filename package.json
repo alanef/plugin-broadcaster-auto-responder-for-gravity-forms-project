@@ -10,13 +10,13 @@
         "broadcaster",
         "whatsapp"
     ],
-    "homepage": "https://github.com/alanef/plugin-gravity-forms",
+    "homepage": "https://github.com/alanef/broadcaster-auto-responder-for-gravity-forms",
     "repository": {
         "type": "git",
-        "url": "https://github.com/alanef/plugin-gravity-forms.git"
+        "url": "https://github.com/alanef/broadcaster-auto-responder-for-gravity-forms.git"
     },
     "bugs": {
-        "url": "https://github.com/alanef/plugin-gravity-forms/issues"
+        "url": "https://github.com/alanef/broadcaster-auto-responder-for-gravity-forms/issues"
     },
     "scripts": {
         "env:start": "wp-env start --xdebug",
