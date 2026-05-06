@@ -16,8 +16,8 @@
  * @package BroadcasterGF
  */
 
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 define( 'BROADCASTERGF_VERSION', '1.0.0' );

@@ -97,14 +97,14 @@ class Settings {
 		$out     = $current;
 
 		if ( isset( $input['api_url'] ) ) {
-			$url             = trim( (string) $input['api_url'] );
-			$url             = untrailingslashit( esc_url_raw( $url ) );
-			$out['api_url']  = $url;
+			$url            = trim( (string) $input['api_url'] );
+			$url            = untrailingslashit( esc_url_raw( $url ) );
+			$out['api_url'] = $url;
 		}
 
 		if ( isset( $input['api_key'] ) ) {
 			$key = trim( (string) $input['api_key'] );
-			// Treat "all bullets" or empty as "no change".
+			// Empty submissions or the bullet-mask placeholder mean keep the saved key.
 			if ( '' !== $key && ! preg_match( '/^•+$/u', $key ) ) {
 				$out['api_key'] = sanitize_text_field( $key );
 			}
