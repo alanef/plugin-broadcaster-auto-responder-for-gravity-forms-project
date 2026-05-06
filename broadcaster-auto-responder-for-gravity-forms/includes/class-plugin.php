@@ -42,6 +42,23 @@ class Plugin {
 		( new Settings() )->register();
 		( new Notices() )->register();
 		( new Ajax() )->register();
+		add_action( 'gform_loaded', array( $this, 'register_gf_addon' ), 5 );
+	}
+
+	/**
+	 * Register the Gravity Forms feed add-on once GF has loaded.
+	 *
+	 * Runs at gform_loaded priority 5 (the GF-recommended slot for add-on
+	 * registration). No-ops if Gravity Forms is missing the feed-add-on
+	 * framework — the admin Notices class already warns the operator in
+	 * that case.
+	 */
+	public function register_gf_addon(): void {
+		if ( ! method_exists( '\\GFForms', 'include_feed_addon_framework' ) ) {
+			return;
+		}
+		\GFForms::include_feed_addon_framework();
+		\GFAddOn::register( '\\BroadcasterGF\\Gf\\FeedAddOn' );
 	}
 
 	/**
