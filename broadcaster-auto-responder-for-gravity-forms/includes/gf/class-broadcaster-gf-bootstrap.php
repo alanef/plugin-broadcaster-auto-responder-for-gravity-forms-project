@@ -46,5 +46,9 @@ class Broadcaster_GF_Bootstrap {
 			10,
 			4
 		);
+		add_filter(
+			'gform_pre_render',
+			array( '\Broadcaster_GF_WhatsApp_Recipient_Field', 'maybe_enqueue_public_assets' )
+		);
 	}
 }

@@ -391,4 +391,69 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 
 		return $value_html . $marker;
 	}
+
+	/**
+	 * Enqueue the public-form Submitter Validator JS and styles when a
+	 * form contains at least one whatsapp_recipient field.
+	 *
+	 * Hooked to `gform_pre_render`. Pass-through filter — does not modify
+	 * the form, only side-effects asset registration. Gated to public
+	 * rendering (admin form-editor preview doesn't need the public-form JS).
+	 *
+	 * @param array $form Form array (unchanged on return).
+	 * @return array
+	 */
+	public static function maybe_enqueue_public_assets( $form ) {
+		if ( is_admin() ) {
+			return $form;
+		}
+
+		if ( ! self::form_has_recipient_field( $form ) ) {
+			return $form;
+		}
+
+		wp_enqueue_script(
+			'broadcastergf-recipient-field',
+			BROADCASTERGF_URL . 'assets/js/whatsapp-recipient-field.js',
+			array(),
+			BROADCASTERGF_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'broadcastergf-recipient-field',
+			'BroadcasterGFRecipientFieldL10n',
+			array(
+				'invalidPhone'           => __( 'Please enter a valid phone number.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'invalidPhoneOrUsername' => __( 'Please enter a valid phone number, or a WhatsApp username starting with @.', 'broadcaster-auto-responder-for-gravity-forms' ),
+			)
+		);
+
+		wp_enqueue_style(
+			'broadcastergf-recipient-field',
+			BROADCASTERGF_URL . 'assets/css/whatsapp-recipient-field.css',
+			array(),
+			BROADCASTERGF_VERSION
+		);
+
+		return $form;
+	}
+
+	/**
+	 * Returns true if a form array contains at least one whatsapp_recipient field.
+	 *
+	 * @param array $form Form array.
+	 * @return bool
+	 */
+	private static function form_has_recipient_field( $form ) {
+		if ( empty( $form['fields'] ) || ! is_array( $form['fields'] ) ) {
+			return false;
+		}
+		foreach ( $form['fields'] as $field ) {
+			if ( isset( $field->type ) && 'whatsapp_recipient' === $field->type ) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
