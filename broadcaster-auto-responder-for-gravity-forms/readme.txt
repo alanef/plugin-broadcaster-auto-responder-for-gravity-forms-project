@@ -3,7 +3,7 @@ Contributors: alanef, fullworks
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.0.2
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,10 +20,11 @@ If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, thi
 
 * For each form you opt in to, the submission becomes an incoming contact message in Broadcaster, attributed to the form so support staff know where the contact came from.
 * Each submission can trigger one optional template auto-response — either a single template that always fires, or two templates (in-hours / out-of-hours) and Broadcaster picks based on your company's configured business hours.
+* A dedicated **WhatsApp Recipient** custom field (under *Advanced Fields* in the form editor) captures the contact's phone number in a single input, validates the format inline before form submission, and prevents the submitter from accidentally collecting a typo'd number that Broadcaster would later silently fail to deliver to. Or use any standard Gravity Forms field as the recipient mapping for backward compatibility.
 * Phone or WhatsApp username (or both) are mapped from form fields you nominate.
 * Standard Gravity Forms merge tags work in the message body and in template placeholder values.
 * Standard Gravity Forms conditional logic decides whether a feed runs for a given submission.
-* Failures never block the form — a Broadcaster outage doesn't stop the user's submission, the email notification, or the confirmation page.
+* Failures never block the form — a Broadcaster outage doesn't stop the user's submission, the email notification, or the confirmation page. When Broadcaster declines a recipient as undeliverable, the failure is surfaced inline on the Gravity Forms entry detail so site administrators can see what didn't deliver and why.
 
 = What it does *not* do =
 
@@ -96,9 +97,13 @@ Yes. Add as many feeds as you like per form. Use Gravity Forms' standard conditi
 
 Map the **WhatsApp username field** but leave the phone field unmapped. Broadcaster will store/match by username. Note that auto-response template delivery currently requires a phone or BSUID Broadcaster can resolve — username-only contacts can be created but template delivery may report `recipient_not_deliverable` until that resolves.
 
+= What's the WhatsApp Recipient field, and should I use it instead of a stock phone field? =
+
+It's a custom field type this plugin adds, found under *Advanced Fields* in the Gravity Forms editor. It accepts a phone number in any reasonable format (with or without a country code), validates inline before submit so the visitor sees typos as a "Please enter a valid phone number" error and corrects them on the spot, and pre-cleans the value to international format so Broadcaster receives clean data. Use it on new forms and on any form where silent lead-drops have been a problem. Existing forms with stock Gravity Forms phone / text fields continue to work exactly as before — the new field is opt-in. (A future release will also accept WhatsApp usernames in the same field, once Meta enables that feature publicly.)
+
 = Phone numbers in national format don't match my existing contacts. Why? =
 
-Broadcaster's phone normalization expects an international number (e.g. `+447714…`). If your form lets users type a national-format number (`07714…`) without an explicit country code, Broadcaster may store/match it incorrectly. Configure your form's phone field to require international format, or set a default phone country at the Broadcaster company level (when that feature ships).
+Broadcaster's phone normalization needs to know which country to interpret a national-format number against. The **WhatsApp Recipient** field handles this for you: configure a default country under *Forms → Settings → Broadcaster → Phone normalisation*, and the field assumes that country whenever a submitter types a national-format number (and overrides it whenever they type an explicit `+` international prefix). For stock Gravity Forms phone fields, configure the field to require international format, or rely on Broadcaster's company-level default phone country.
 
 == Screenshots ==
 
@@ -109,6 +114,11 @@ Broadcaster's phone normalization expects an international number (e.g. `+447714
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.1.0 =
+* **New WhatsApp Recipient field.** A dedicated custom field type, under *Advanced Fields* in the Gravity Forms editor, that captures the contact's phone number in a single input and validates the format inline before form submission. Submitters see typos as a "Please enter a valid phone number" error and correct them on the spot, instead of having the form succeed and Broadcaster reject the lead silently downstream. Existing forms with stock Gravity Forms phone / text field mappings keep working exactly as before — the new field is opt-in.
+* **New "Default phone country" plugin setting** (*Forms → Settings → Broadcaster → Phone normalisation*). When a submitter types a national-format number into a WhatsApp Recipient field, this is the country we will assume. ISO-3166 alpha-2 picker covering United Kingdom, United States, Ireland, Australia, India, Indonesia. Each WhatsApp Recipient field also has its own per-field override for forms that target a different country than the rest of the site.
+* **Broadcaster recipient rejections are now visible to administrators.** When Broadcaster declines a recipient through a WhatsApp Recipient field — HTTP 422 on dispatch, or `recipient_not_deliverable` in the response — the rejection is surfaced inline beside the field on the Gravity Forms entry detail view, plus an audit-trail note in the GF notes panel and a one-line log entry under *Forms → Settings → Logging*. Form submission itself is never blocked; this only affects the diagnostic surface administrators see after the fact.
 
 = 1.0.2 =
 * **Critical fix:** the v1.0.0 and v1.0.1 release zips were built without the plugin's `vendor/autoload.php`, causing a fatal error when opening *Forms → Settings → Broadcaster* (`Class "BroadcasterGF\Api\Client" not found`). The release workflow now runs `composer install --no-dev --optimize-autoloader` inside the plugin directory before packaging the zip, so the autoloader and namespaced classes ship correctly. Anyone running v1.0.0 or v1.0.1 should upgrade immediately.
