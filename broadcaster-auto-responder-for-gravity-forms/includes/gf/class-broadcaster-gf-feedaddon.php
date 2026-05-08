@@ -402,16 +402,10 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'tooltip'     => esc_html__( 'Shown in Broadcaster chat bubbles to identify where the message came from. Leave blank to use the form name.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
-						'label'   => esc_html__( 'Phone field', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'   => esc_html__( 'Recipient field', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'    => 'field_select',
-						'name'    => 'phone_field',
-						'tooltip' => esc_html__( 'Form field that holds the contact phone number. Map at least one of phone or WhatsApp username.', 'broadcaster-auto-responder-for-gravity-forms' ),
-					),
-					array(
-						'label'   => esc_html__( 'WhatsApp username field', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'field_select',
-						'name'    => 'whatsapp_username_field',
-						'tooltip' => esc_html__( 'Form field that holds the contact WhatsApp BSUID/username. Optional if a phone field is mapped.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'name'    => 'recipient_field',
+						'tooltip' => esc_html__( 'Map the form field that captures the contact\'s WhatsApp recipient. For the dedicated "WhatsApp Number" field type, the plugin detects whether the submitter typed a phone number or a @username and routes to the right Broadcaster slot automatically. For any other field type, the value is treated as a phone number.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
 						'label'   => esc_html__( 'Submitter name field', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -587,17 +581,49 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$client = new \BroadcasterGF\Api\Client( $api_url, $api_key );
 		$result = $client->send_incoming_message( $payload );
 
+		$http_code    = isset( $result['http_code'] ) ? (string) $result['http_code'] : 'n/a';
+		$is_wr_field  = null !== $recipient_field;
+		$is_wr_reject = $is_wr_field && \BroadcasterGF\GF\Api_Rejection_Surfacer::is_rejection( $result );
+
 		if ( $result['ok'] ) {
 			$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster accepted entry %s (HTTP %d).', $feed_id, $entry_id, (int) $result['http_code'] ) );
+			\GFAPI::add_note(
+				(int) $entry_id,
+				0,
+				'Broadcaster',
+				sprintf(
+					/* translators: %s: HTTP status code */
+					esc_html__( 'Broadcaster received this submission (HTTP %s).', 'broadcaster-auto-responder-for-gravity-forms' ),
+					$http_code
+				)
+			);
 		} else {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s — Broadcaster dispatch failed for entry %s: %s', $feed_id, $entry_id, $result['message'] ) );
+
+			// Skip the generic failure note when the recipient-rejection
+			// surfacer will add a more specific one ("Broadcaster declined
+			// the recipient ...") in the next step. Avoids two notes for
+			// the same outcome on WhatsApp Recipient field rejections.
+			if ( ! $is_wr_reject ) {
+				\GFAPI::add_note(
+					(int) $entry_id,
+					0,
+					'Broadcaster',
+					sprintf(
+						/* translators: 1: HTTP status code or 'n/a', 2: detail message from the API client */
+						esc_html__( 'Broadcaster did not receive this submission (HTTP %1$s). %2$s', 'broadcaster-auto-responder-for-gravity-forms' ),
+						$http_code,
+						(string) $result['message']
+					)
+				);
+			}
 		}
 
 		// BRO-902: when the recipient came from a WhatsApp Recipient field
 		// and Broadcaster declined, surface the rejection inline beside
 		// that field on the entry detail view (Q2). Always non-blocking —
 		// the form submission has already completed.
-		if ( null !== $recipient_field ) {
+		if ( $is_wr_field ) {
 			\BroadcasterGF\GF\Api_Rejection_Surfacer::surface(
 				$result,
 				(int) $entry_id,
@@ -636,43 +662,50 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$username           = '';
 		$recipient_field_id = null;
 
-		foreach ( array( 'phone_field', 'whatsapp_username_field' ) as $slot_meta_key ) {
-			$mapped_field_id = (string) rgar( $meta, $slot_meta_key );
-			if ( '' === $mapped_field_id ) {
-				continue;
-			}
+		$mapped_field_id = (string) rgar( $meta, 'recipient_field' );
+		if ( '' === $mapped_field_id ) {
+			return array(
+				'phone'              => $phone,
+				'username'           => $username,
+				'recipient_field_id' => $recipient_field_id,
+			);
+		}
 
-			$form_field = $this->find_form_field( $form, $mapped_field_id );
-			$is_wr      = $form_field && isset( $form_field->type ) && 'whatsapp_recipient' === $form_field->type;
+		$form_field = $this->find_form_field( $form, $mapped_field_id );
+		$is_wr      = $form_field && isset( $form_field->type ) && 'whatsapp_recipient' === $form_field->type;
 
-			if ( $is_wr && null === $recipient_field_id ) {
-				$recipient_field_id = (int) $mapped_field_id;
-			}
+		if ( $is_wr ) {
+			$recipient_field_id = (int) $mapped_field_id;
+		}
 
-			$raw = $this->resolve_field_value( $form, $entry, $mapped_field_id );
-			if ( '' === $raw ) {
-				continue;
-			}
+		$raw = $this->resolve_field_value( $form, $entry, $mapped_field_id );
+		if ( '' === $raw ) {
+			return array(
+				'phone'              => $phone,
+				'username'           => $username,
+				'recipient_field_id' => $recipient_field_id,
+			);
+		}
 
-			if ( $is_wr ) {
-				$payload = \BroadcasterGF\GF\Field_Submission_Dispatcher::dispatch(
-					$raw,
-					$this->resolve_recipient_field_region( $form_field ),
-					(bool) BROADCASTERGF_ENABLE_USERNAMES
-				);
-				if ( null === $payload ) {
-					continue;
-				}
-				if ( 'username' === $payload['kind'] && '' === $username ) {
+		if ( $is_wr ) {
+			// WhatsApp Recipient field: dispatcher decides which Broadcaster
+			// slot the value goes into based on input shape (`@` prefix →
+			// username, anything else → phone).
+			$payload = \BroadcasterGF\GF\Field_Submission_Dispatcher::dispatch(
+				$raw,
+				$this->resolve_recipient_field_region( $form_field ),
+				(bool) BROADCASTERGF_ENABLE_USERNAMES
+			);
+			if ( null !== $payload ) {
+				if ( 'username' === $payload['kind'] ) {
 					$username = $payload['value'];
-				} elseif ( 'phone' === $payload['kind'] && '' === $phone ) {
+				} else {
 					$phone = $payload['value'];
 				}
-			} elseif ( 'phone_field' === $slot_meta_key && '' === $phone ) {
-				$phone = $raw;
-			} elseif ( 'whatsapp_username_field' === $slot_meta_key && '' === $username ) {
-				$username = $raw;
 			}
+		} else {
+			// Any other field type: value is treated as a phone number.
+			$phone = $raw;
 		}
 
 		return array(
@@ -803,13 +836,12 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	public function feed_settings_validation( $settings ) {
 		$valid = parent::feed_settings_validation( $settings );
 
-		$phone    = isset( $settings['phone_field'] ) ? $settings['phone_field'] : '';
-		$username = isset( $settings['whatsapp_username_field'] ) ? $settings['whatsapp_username_field'] : '';
+		$recipient = isset( $settings['recipient_field'] ) ? $settings['recipient_field'] : '';
 
-		if ( '' === $phone && '' === $username ) {
+		if ( '' === $recipient ) {
 			$this->set_field_error(
-				array( 'name' => 'phone_field' ),
-				esc_html__( 'Map at least one of phone or WhatsApp username.', 'broadcaster-auto-responder-for-gravity-forms' )
+				array( 'name' => 'recipient_field' ),
+				esc_html__( 'Map a recipient field.', 'broadcaster-auto-responder-for-gravity-forms' )
 			);
 			$valid = false;
 		}
