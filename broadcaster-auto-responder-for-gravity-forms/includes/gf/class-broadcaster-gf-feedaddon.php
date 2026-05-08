@@ -202,6 +202,46 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			'html' => array( $this, 'render_connection_status' ),
 		);
 
+		$default_country_field = array(
+			'name'          => 'default_phone_country',
+			'label'         => esc_html__( 'Default phone country', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'type'          => 'select',
+			'choices'       => array(
+				array(
+					'value' => 'GB',
+					'label' => esc_html__( 'United Kingdom (+44)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+				array(
+					'value' => 'US',
+					'label' => esc_html__( 'United States (+1)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+				array(
+					'value' => 'IE',
+					'label' => esc_html__( 'Ireland (+353)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+				array(
+					'value' => 'AU',
+					'label' => esc_html__( 'Australia (+61)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+				array(
+					'value' => 'IN',
+					'label' => esc_html__( 'India (+91)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+				array(
+					'value' => 'ID',
+					'label' => esc_html__( 'Indonesia (+62)', 'broadcaster-auto-responder-for-gravity-forms' ),
+				),
+			),
+			'default_value' => 'GB',
+			'tooltip'       => esc_html__( 'Used by the WhatsApp Recipient field to interpret national-format phone numbers. A per-field override on a specific WhatsApp Recipient field wins over this setting; an explicit + prefix on the submitter\'s input wins over both.', 'broadcaster-auto-responder-for-gravity-forms' ),
+		);
+
+		$phone_section = array(
+			'title'       => esc_html__( 'Phone normalisation', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'description' => '<p>' . esc_html__( 'When a submitter types a national-format number into a WhatsApp Recipient field, this is the country we will assume.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</p>',
+			'fields'      => array( $default_country_field ),
+		);
+
 		if ( $this->is_production() ) {
 			return array(
 				array(
@@ -212,6 +252,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 					) . '</p>',
 					'fields'      => array( $api_key_field, $status_field ),
 				),
+				$phone_section,
 			);
 		}
 
@@ -231,6 +272,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 					$status_field,
 				),
 			),
+			$phone_section,
 		);
 	}
 
@@ -488,9 +530,11 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 		$meta = isset( $feed['meta'] ) && is_array( $feed['meta'] ) ? $feed['meta'] : array();
 
-		$phone    = $this->resolve_field_value( $form, $entry, rgar( $meta, 'phone_field' ) );
-		$username = $this->resolve_field_value( $form, $entry, rgar( $meta, 'whatsapp_username_field' ) );
-		$name     = $this->resolve_field_value( $form, $entry, rgar( $meta, 'submitter_name_field' ) );
+		$resolved        = $this->resolve_recipient_slots( $form, $entry, $meta );
+		$phone           = $resolved['phone'];
+		$username        = $resolved['username'];
+		$recipient_field = $resolved['recipient_field_id'];
+		$name            = $this->resolve_field_value( $form, $entry, rgar( $meta, 'submitter_name_field' ) );
 
 		if ( '' === $phone && '' === $username ) {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — neither phone nor WhatsApp username resolved from entry %s.', $feed_id, $entry_id ) );
@@ -561,7 +605,140 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s — Broadcaster dispatch failed for entry %s: %s', $feed_id, $entry_id, $result['message'] ) );
 		}
 
+		// BRO-902: when the recipient came from a WhatsApp Recipient field
+		// and Broadcaster declined, surface the rejection inline beside
+		// that field on the entry detail view (Q2). Always non-blocking —
+		// the form submission has already completed.
+		if ( null !== $recipient_field ) {
+			\BroadcasterGF\GF\Api_Rejection_Surfacer::surface(
+				$result,
+				(int) $entry_id,
+				$recipient_field,
+				array( $this, 'log_error' ),
+				'gform_update_meta',
+				array( '\GFAPI', 'add_note' )
+			);
+		}
+
 		return $entry;
+	}
+
+	/**
+	 * Resolve the phone and username slot values for a feed dispatch,
+	 * honouring the WhatsApp Recipient field type (BRO-902).
+	 *
+	 * For regular fields, the value goes into whichever slot the form
+	 * designer mapped. For WhatsApp Recipient fields, the dispatcher
+	 * decides the slot from the input — `@`-prefixed → username slot;
+	 * anything else → phone slot — regardless of which feed slot the
+	 * field is mapped to. The first non-empty assignment per slot wins,
+	 * so a WR field's verdict cannot be overwritten by a later mapping.
+	 *
+	 * Returns the ID of the first WhatsApp Recipient field encountered;
+	 * the caller uses this to wire the API Rejection Surfacer at the
+	 * right field for the inline entry-detail marker (Q2).
+	 *
+	 * @param array $form  Form definition.
+	 * @param array $entry Form entry.
+	 * @param array $meta  Feed meta config.
+	 * @return array{phone:string,username:string,recipient_field_id:int|null}
+	 */
+	private function resolve_recipient_slots( $form, $entry, $meta ): array {
+		$phone              = '';
+		$username           = '';
+		$recipient_field_id = null;
+
+		foreach ( array( 'phone_field', 'whatsapp_username_field' ) as $slot_meta_key ) {
+			$mapped_field_id = (string) rgar( $meta, $slot_meta_key );
+			if ( '' === $mapped_field_id ) {
+				continue;
+			}
+
+			$form_field = $this->find_form_field( $form, $mapped_field_id );
+			$is_wr      = $form_field && isset( $form_field->type ) && 'whatsapp_recipient' === $form_field->type;
+
+			if ( $is_wr && null === $recipient_field_id ) {
+				$recipient_field_id = (int) $mapped_field_id;
+			}
+
+			$raw = $this->resolve_field_value( $form, $entry, $mapped_field_id );
+			if ( '' === $raw ) {
+				continue;
+			}
+
+			if ( $is_wr ) {
+				$payload = \BroadcasterGF\GF\Field_Submission_Dispatcher::dispatch(
+					$raw,
+					$this->resolve_recipient_field_region( $form_field ),
+					(bool) BROADCASTERGF_ENABLE_USERNAMES
+				);
+				if ( null === $payload ) {
+					continue;
+				}
+				if ( 'username' === $payload['kind'] && '' === $username ) {
+					$username = $payload['value'];
+				} elseif ( 'phone' === $payload['kind'] && '' === $phone ) {
+					$phone = $payload['value'];
+				}
+			} elseif ( 'phone_field' === $slot_meta_key && '' === $phone ) {
+				$phone = $raw;
+			} elseif ( 'whatsapp_username_field' === $slot_meta_key && '' === $username ) {
+				$username = $raw;
+			}
+		}
+
+		return array(
+			'phone'              => $phone,
+			'username'           => $username,
+			'recipient_field_id' => $recipient_field_id,
+		);
+	}
+
+	/**
+	 * Find a form field by ID. GF subfield IDs like "1.3" are stored on
+	 * the parent field (id 1), so we cast to int and match top-level.
+	 *
+	 * @param array  $form     Form definition.
+	 * @param string $field_id Field id (may be a sub-field like "1.3").
+	 * @return \GF_Field|null
+	 */
+	private function find_form_field( $form, $field_id ) {
+		if ( '' === (string) $field_id || empty( $form['fields'] ) || ! is_array( $form['fields'] ) ) {
+			return null;
+		}
+		$top_level = (int) $field_id;
+		foreach ( $form['fields'] as $field ) {
+			if ( isset( $field->id ) && (int) $field->id === $top_level ) {
+				return $field;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Resolve the effective region for a WhatsApp Recipient field.
+	 *
+	 * Per-field `defaultPhoneCountry` override > plugin-level
+	 * `default_phone_country` setting > hard-coded GB fallback. Mirrors
+	 * the precedence used in the field's own input rendering so the
+	 * client-side helper text and the server-side validator stay in sync.
+	 *
+	 * @param \GF_Field $field The WhatsApp Recipient field instance.
+	 * @return string ISO-3166 alpha-2 region (uppercase).
+	 */
+	private function resolve_recipient_field_region( $field ): string {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- defaultPhoneCountry is a GF custom property (camelCase by GF convention).
+		$field_country = isset( $field->defaultPhoneCountry ) ? (string) $field->defaultPhoneCountry : '';
+		if ( '' !== $field_country ) {
+			return strtoupper( $field_country );
+		}
+
+		$plugin_country = (string) $this->get_plugin_setting( 'default_phone_country' );
+		if ( '' !== $plugin_country ) {
+			return strtoupper( $plugin_country );
+		}
+
+		return 'GB';
 	}
 
 	/**
