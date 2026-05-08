@@ -23,6 +23,22 @@ if ( ! defined( 'BROADCASTERGF_ENABLE_USERNAMES' ) ) {
 	define( 'BROADCASTERGF_ENABLE_USERNAMES', false );
 }
 
+/*
+ * Tiny stubs for WordPress translation functions so plugin classes that
+ * call `__()` can be loaded and exercised without booting WP. Production
+ * uses the real WP implementations; these are pass-throughs for tests.
+ */
+if ( ! function_exists( '__' ) ) {
+	function __( $text, $domain = 'default' ) { // phpcs:ignore WordPress.WP.I18n
+		return $text;
+	}
+}
+if ( ! function_exists( 'esc_html__' ) ) {
+	function esc_html__( $text, $domain = 'default' ) { // phpcs:ignore WordPress.WP.I18n
+		return $text;
+	}
+}
+
 // Load PHPUnit + dev tooling.
 $dev_autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
 if ( ! file_exists( $dev_autoload ) ) {

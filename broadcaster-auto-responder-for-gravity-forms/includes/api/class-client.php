@@ -123,9 +123,14 @@ class Client {
 	 * shape (BRO-883). Empty values are NOT stripped here — pass only the
 	 * keys you want sent.
 	 *
+	 * The return shape carries an optional `error_code` extracted from
+	 * `auto_response.error_code` when present (BRO-902). The API Rejection
+	 * Surfacer reads it to decide whether to surface a recipient rejection
+	 * without re-parsing the raw response body.
+	 *
 	 * @param array $payload Payload matching the BRO-883 contract.
 	 *
-	 * @return array{ok:bool,http_code:int|null,message:string,response:array|null}
+	 * @return array{ok:bool,http_code:int|null,message:string,response:array|null,error_code:string|null}
 	 */
 	public function send_incoming_message( array $payload ): array {
 		$endpoint = $this->base_url . '/api/v1/messages/incoming';
@@ -145,14 +150,15 @@ class Client {
 
 		if ( is_wp_error( $response ) ) {
 			return array(
-				'ok'        => false,
-				'http_code' => null,
-				'message'   => sprintf(
+				'ok'         => false,
+				'http_code'  => null,
+				'message'    => sprintf(
 					/* translators: %s: low-level transport error message */
 					__( 'Transport error contacting Broadcaster: %s', 'broadcaster-auto-responder-for-gravity-forms' ),
 					$response->get_error_message()
 				),
-				'response'  => null,
+				'response'   => null,
+				'error_code' => null,
 			);
 		}
 
@@ -161,12 +167,25 @@ class Client {
 		$decoded     = json_decode( $body_string, true );
 		$body        = is_array( $decoded ) ? $decoded : null;
 
+		// BRO-902: lift the auto_response.error_code (when present) to a
+		// top-level key so callers like the API Rejection Surfacer can
+		// branch on it without re-parsing the response body.
+		$error_code = null;
+		if (
+			is_array( $body )
+			&& isset( $body['auto_response']['error_code'] )
+			&& is_string( $body['auto_response']['error_code'] )
+		) {
+			$error_code = $body['auto_response']['error_code'];
+		}
+
 		if ( $code >= 200 && $code < 300 ) {
 			return array(
-				'ok'        => true,
-				'http_code' => $code,
-				'message'   => __( 'Broadcaster accepted the message.', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'response'  => $body,
+				'ok'         => true,
+				'http_code'  => $code,
+				'message'    => __( 'Broadcaster accepted the message.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'response'   => $body,
+				'error_code' => $error_code,
 			);
 		}
 
@@ -180,15 +199,16 @@ class Client {
 		}
 
 		return array(
-			'ok'        => false,
-			'http_code' => $code,
-			'message'   => sprintf(
+			'ok'         => false,
+			'http_code'  => $code,
+			'message'    => sprintf(
 				/* translators: 1: HTTP status code, 2: detail message from Broadcaster */
 				__( 'Broadcaster rejected the message (HTTP %1$d). %2$s', 'broadcaster-auto-responder-for-gravity-forms' ),
 				$code,
 				$detail
 			),
-			'response'  => $body,
+			'response'   => $body,
+			'error_code' => $error_code,
 		);
 	}
 }
