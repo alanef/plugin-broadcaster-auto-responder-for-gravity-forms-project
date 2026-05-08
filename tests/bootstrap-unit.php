@@ -1,0 +1,65 @@
+<?php
+/**
+ * Bootstrap for pure unit tests.
+ *
+ * Pure unit tests (in tests/unit/) cover plugin classes that have no
+ * WordPress or Gravity Forms dependencies — validators, discriminator,
+ * dispatcher, etc. They don't need the WP test framework, so this bootstrap
+ * loads only the dev composer autoload + a tiny SPL autoloader for the
+ * plugin's classmap convention.
+ *
+ * Integration tests (in tests/integration/) use bootstrap.php instead, which
+ * spins up the full WP test environment.
+ *
+ * @package BroadcasterGF
+ */
+
+// Defines that plugin source files expect at the top-of-file ABSPATH guard.
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', '/' );
+}
+
+if ( ! defined( 'BROADCASTERGF_ENABLE_USERNAMES' ) ) {
+	define( 'BROADCASTERGF_ENABLE_USERNAMES', false );
+}
+
+// Load PHPUnit + dev tooling.
+$dev_autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
+if ( ! file_exists( $dev_autoload ) ) {
+	fwrite( STDERR, "Run `composer install` at the repository root before running unit tests.\n" );
+	exit( 1 );
+}
+require $dev_autoload;
+
+/*
+ * Tiny autoloader for plugin classes. Mirrors the plugin's classmap convention:
+ *   BroadcasterGF\Foo\Bar_Baz  →  includes/foo/class-bar-baz.php
+ *
+ * This avoids forcing testers to run `composer install` inside the plugin
+ * subdirectory before the pure unit tests can run. The plugin's own composer
+ * autoloader is for the deployed plugin; this autoloader is just for tests.
+ */
+spl_autoload_register(
+	function ( $class ) {
+		$prefix = 'BroadcasterGF\\';
+		if ( 0 !== strpos( $class, $prefix ) ) {
+			return;
+		}
+
+		$relative = substr( $class, strlen( $prefix ) );
+		$parts    = explode( '\\', $relative );
+
+		$base_filename = 'class-' . str_replace( '_', '-', strtolower( array_pop( $parts ) ) ) . '.php';
+		$subdir        = '';
+		if ( ! empty( $parts ) ) {
+			$subdir = implode( '/', array_map( 'strtolower', $parts ) ) . '/';
+		}
+
+		$plugin_includes = dirname( __DIR__ ) . '/broadcaster-auto-responder-for-gravity-forms/includes';
+		$file            = $plugin_includes . '/' . $subdir . $base_filename;
+
+		if ( file_exists( $file ) ) {
+			require_once $file;
+		}
+	}
+);

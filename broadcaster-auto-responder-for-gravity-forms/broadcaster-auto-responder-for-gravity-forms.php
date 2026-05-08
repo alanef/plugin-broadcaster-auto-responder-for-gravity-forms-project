@@ -25,6 +25,29 @@ define( 'BROADCASTERGF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BROADCASTERGF_URL', plugin_dir_url( __FILE__ ) );
 define( 'BROADCASTERGF_BASENAME', plugin_basename( __FILE__ ) );
 
+/*
+ * BROADCASTERGF_ENABLE_USERNAMES — feature flag for the WhatsApp Recipient
+ * field's username support.
+ *
+ * Default: false. While this flag is off, the WhatsApp Recipient field's
+ * helper text omits the @username option and `@`-prefixed input is rejected
+ * as invalid by the Submitter Validator. The underlying username code path
+ * (Recipient_Discriminator, Username_Validator, Field_Submission_Dispatcher
+ * username slot) is fully built; only the submitter-facing surface is gated.
+ *
+ * Override per-site by adding the following to wp-config.php BEFORE this
+ * plugin loads:
+ *
+ *     define( 'BROADCASTERGF_ENABLE_USERNAMES', true );
+ *
+ * The default flips to true in a follow-up plugin release once Meta enables
+ * WhatsApp usernames generally. See specification/BRO-902/design.md (D12) in
+ * the broadcaster-web repository for the architectural rationale.
+ */
+if ( ! defined( 'BROADCASTERGF_ENABLE_USERNAMES' ) ) {
+	define( 'BROADCASTERGF_ENABLE_USERNAMES', false );
+}
+
 if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
