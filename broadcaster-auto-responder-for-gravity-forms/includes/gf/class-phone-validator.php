@@ -40,13 +40,20 @@ final class Phone_Validator {
 	/**
 	 * Per-region national-format rules.
 	 *
-	 * 'pattern' — applied to the digits-only cleaned input (after stripping
-	 *             everything except digits and a leading `+`).
-	 * 'strip'   — regex applied once to remove any leading prefix (e.g. `0`
-	 *             for GB, optional `1` for US) before prepending the country
-	 *             code. Use null for regions where the national number is
-	 *             already the international subscriber number (e.g. IN).
-	 * 'cc'      — the country dialling code (without `+`).
+	 * Each entry holds:
+	 *   'pattern' — regex applied to the digits-only cleaned input (after
+	 *               stripping everything except digits and a leading `+`).
+	 *               Deliberately approximate; tighter strict validation is
+	 *               Broadcaster's libphonenumber-for-php on the server side.
+	 *   'strip'   — regex applied once to remove a leading prefix before
+	 *               prepending the country code (e.g. `0` for most European
+	 *               regions, optional `1` for NANP). Use null when the
+	 *               national number is already the international subscriber
+	 *               number (e.g. IN, ES).
+	 *   'cc'      — country dialling code, no `+`.
+	 *   'name'    — display name for the country picker UI. English by
+	 *               convention; localisation is the form designer's
+	 *               concern via standard WP translation.
 	 */
 	private static function rules() {
 		return array(
@@ -54,33 +61,278 @@ final class Phone_Validator {
 				'pattern' => '/^0[1-9]\d{9}$/',
 				'strip'   => '/^0/',
 				'cc'      => '44',
+				'name'    => 'United Kingdom',
 			),
 			'IE' => array(
 				'pattern' => '/^0[1-9]\d{7,8}$/',
 				'strip'   => '/^0/',
 				'cc'      => '353',
-			),
-			'AU' => array(
-				'pattern' => '/^0[2-478]\d{8}$/',
-				'strip'   => '/^0/',
-				'cc'      => '61',
-			),
-			'ID' => array(
-				'pattern' => '/^0\d{8,11}$/',
-				'strip'   => '/^0/',
-				'cc'      => '62',
+				'name'    => 'Ireland',
 			),
 			'US' => array(
 				'pattern' => '/^1?[2-9]\d{9}$/',
 				'strip'   => '/^1/',
 				'cc'      => '1',
+				'name'    => 'United States',
+			),
+			'CA' => array(
+				'pattern' => '/^1?[2-9]\d{9}$/',
+				'strip'   => '/^1/',
+				'cc'      => '1',
+				'name'    => 'Canada',
+			),
+			'AU' => array(
+				'pattern' => '/^0[2-478]\d{8}$/',
+				'strip'   => '/^0/',
+				'cc'      => '61',
+				'name'    => 'Australia',
+			),
+			'NZ' => array(
+				'pattern' => '/^0[2-9]\d{7,8}$/',
+				'strip'   => '/^0/',
+				'cc'      => '64',
+				'name'    => 'New Zealand',
+			),
+			'ZA' => array(
+				'pattern' => '/^0\d{9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '27',
+				'name'    => 'South Africa',
 			),
 			'IN' => array(
 				'pattern' => '/^[6-9]\d{9}$/',
 				'strip'   => null,
 				'cc'      => '91',
+				'name'    => 'India',
+			),
+			'ID' => array(
+				'pattern' => '/^0\d{8,11}$/',
+				'strip'   => '/^0/',
+				'cc'      => '62',
+				'name'    => 'Indonesia',
+			),
+			'MY' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '60',
+				'name'    => 'Malaysia',
+			),
+			'SG' => array(
+				'pattern' => '/^[3689]\d{7}$/',
+				'strip'   => null,
+				'cc'      => '65',
+				'name'    => 'Singapore',
+			),
+			'TH' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '66',
+				'name'    => 'Thailand',
+			),
+			'PH' => array(
+				'pattern' => '/^0\d{9,10}$/',
+				'strip'   => '/^0/',
+				'cc'      => '63',
+				'name'    => 'Philippines',
+			),
+			'JP' => array(
+				'pattern' => '/^0\d{9,10}$/',
+				'strip'   => '/^0/',
+				'cc'      => '81',
+				'name'    => 'Japan',
+			),
+			'KR' => array(
+				'pattern' => '/^0\d{8,10}$/',
+				'strip'   => '/^0/',
+				'cc'      => '82',
+				'name'    => 'South Korea',
+			),
+			'AE' => array(
+				'pattern' => '/^0?5\d{8}$/',
+				'strip'   => '/^0/',
+				'cc'      => '971',
+				'name'    => 'United Arab Emirates',
+			),
+			'SA' => array(
+				'pattern' => '/^0?5\d{8}$/',
+				'strip'   => '/^0/',
+				'cc'      => '966',
+				'name'    => 'Saudi Arabia',
+			),
+			'IL' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '972',
+				'name'    => 'Israel',
+			),
+			'TR' => array(
+				'pattern' => '/^0\d{10}$/',
+				'strip'   => '/^0/',
+				'cc'      => '90',
+				'name'    => 'Turkey',
+			),
+			'NG' => array(
+				'pattern' => '/^0[7-9]\d{9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '234',
+				'name'    => 'Nigeria',
+			),
+			'KE' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '254',
+				'name'    => 'Kenya',
+			),
+			'EG' => array(
+				'pattern' => '/^0\d{9,10}$/',
+				'strip'   => '/^0/',
+				'cc'      => '20',
+				'name'    => 'Egypt',
+			),
+			'DE' => array(
+				'pattern' => '/^0\d{9,11}$/',
+				'strip'   => '/^0/',
+				'cc'      => '49',
+				'name'    => 'Germany',
+			),
+			'FR' => array(
+				'pattern' => '/^0[1-9]\d{8}$/',
+				'strip'   => '/^0/',
+				'cc'      => '33',
+				'name'    => 'France',
+			),
+			'ES' => array(
+				'pattern' => '/^[6-9]\d{8}$/',
+				'strip'   => null,
+				'cc'      => '34',
+				'name'    => 'Spain',
+			),
+			'IT' => array(
+				'pattern' => '/^\d{9,10}$/',
+				'strip'   => null,
+				'cc'      => '39',
+				'name'    => 'Italy',
+			),
+			'NL' => array(
+				'pattern' => '/^0\d{9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '31',
+				'name'    => 'Netherlands',
+			),
+			'BE' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '32',
+				'name'    => 'Belgium',
+			),
+			'CH' => array(
+				'pattern' => '/^0\d{9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '41',
+				'name'    => 'Switzerland',
+			),
+			'AT' => array(
+				'pattern' => '/^0\d{8,12}$/',
+				'strip'   => '/^0/',
+				'cc'      => '43',
+				'name'    => 'Austria',
+			),
+			'PT' => array(
+				'pattern' => '/^\d{9}$/',
+				'strip'   => null,
+				'cc'      => '351',
+				'name'    => 'Portugal',
+			),
+			'PL' => array(
+				'pattern' => '/^\d{9}$/',
+				'strip'   => null,
+				'cc'      => '48',
+				'name'    => 'Poland',
+			),
+			'SE' => array(
+				'pattern' => '/^0\d{8,9}$/',
+				'strip'   => '/^0/',
+				'cc'      => '46',
+				'name'    => 'Sweden',
+			),
+			'NO' => array(
+				'pattern' => '/^\d{8}$/',
+				'strip'   => null,
+				'cc'      => '47',
+				'name'    => 'Norway',
+			),
+			'DK' => array(
+				'pattern' => '/^\d{8}$/',
+				'strip'   => null,
+				'cc'      => '45',
+				'name'    => 'Denmark',
+			),
+			'FI' => array(
+				'pattern' => '/^0\d{6,11}$/',
+				'strip'   => '/^0/',
+				'cc'      => '358',
+				'name'    => 'Finland',
+			),
+			'BR' => array(
+				'pattern' => '/^\d{10,11}$/',
+				'strip'   => null,
+				'cc'      => '55',
+				'name'    => 'Brazil',
+			),
+			'MX' => array(
+				'pattern' => '/^\d{10}$/',
+				'strip'   => null,
+				'cc'      => '52',
+				'name'    => 'Mexico',
+			),
+			'AR' => array(
+				'pattern' => '/^\d{10,11}$/',
+				'strip'   => null,
+				'cc'      => '54',
+				'name'    => 'Argentina',
 			),
 		);
+	}
+
+	/**
+	 * Public list of supported regions for UI consumption (country pickers
+	 * in plugin settings and per-field settings) and for the JS validator's
+	 * region map. Stable shape: [ region_code => [ 'cc' => …, 'name' => … ] ].
+	 *
+	 * @return array<string,array{cc:string,name:string}>
+	 */
+	public static function supported_regions() {
+		$rules = self::rules();
+		$out   = array();
+		foreach ( $rules as $code => $rule ) {
+			$out[ $code ] = array(
+				'cc'   => $rule['cc'],
+				'name' => $rule['name'],
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * JS-shaped per-region rules for the public-form Submitter Validator.
+	 * Used by the field's enqueue path to wp_localize_script the rules
+	 * so the JS validator stays in lockstep with this PHP source of truth.
+	 *
+	 * @return array<string,array{pattern:string,strip:string|null,cc:string}>
+	 */
+	public static function js_rules() {
+		$rules = self::rules();
+		$out   = array();
+		foreach ( $rules as $code => $rule ) {
+			$out[ $code ] = array(
+				// Pattern stripped of PHP delimiters and modifiers — JS uses
+				// it as `new RegExp(<pattern>)` source.
+				'pattern' => trim( $rule['pattern'], '/' ),
+				'strip'   => null !== $rule['strip'] ? trim( $rule['strip'], '/' ) : null,
+				'cc'      => $rule['cc'],
+			);
+		}
+		return $out;
 	}
 
 	/**

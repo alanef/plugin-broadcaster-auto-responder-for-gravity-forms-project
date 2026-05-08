@@ -202,36 +202,24 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			'html' => array( $this, 'render_connection_status' ),
 		);
 
+		$country_choices = array();
+		foreach ( \BroadcasterGF\GF\Phone_Validator::supported_regions() as $region_code => $region_info ) {
+			$country_choices[] = array(
+				'value' => $region_code,
+				'label' => sprintf(
+					/* translators: 1: country name, 2: dialling code without + */
+					esc_html__( '%1$s (+%2$s)', 'broadcaster-auto-responder-for-gravity-forms' ),
+					$region_info['name'],
+					$region_info['cc']
+				),
+			);
+		}
+
 		$default_country_field = array(
 			'name'          => 'default_phone_country',
 			'label'         => esc_html__( 'Default phone country', 'broadcaster-auto-responder-for-gravity-forms' ),
 			'type'          => 'select',
-			'choices'       => array(
-				array(
-					'value' => 'GB',
-					'label' => esc_html__( 'United Kingdom (+44)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-				array(
-					'value' => 'US',
-					'label' => esc_html__( 'United States (+1)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-				array(
-					'value' => 'IE',
-					'label' => esc_html__( 'Ireland (+353)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-				array(
-					'value' => 'AU',
-					'label' => esc_html__( 'Australia (+61)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-				array(
-					'value' => 'IN',
-					'label' => esc_html__( 'India (+91)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-				array(
-					'value' => 'ID',
-					'label' => esc_html__( 'Indonesia (+62)', 'broadcaster-auto-responder-for-gravity-forms' ),
-				),
-			),
+			'choices'       => $country_choices,
 			'default_value' => 'GB',
 			'tooltip'       => esc_html__( 'Used by the WhatsApp Recipient field to interpret national-format phone numbers. A per-field override on a specific WhatsApp Recipient field wins over this setting; an explicit + prefix on the submitter\'s input wins over both.', 'broadcaster-auto-responder-for-gravity-forms' ),
 		);

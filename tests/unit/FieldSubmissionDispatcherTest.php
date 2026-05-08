@@ -48,12 +48,12 @@ final class FieldSubmissionDispatcherTest extends TestCase {
 	}
 
 	public function test_unsupported_region_without_plus_prefix_returns_null(): void {
-		// ZA isn't supported; no `+` prefix → can't construct E.164.
-		$this->assertNull( Field_Submission_Dispatcher::dispatch( '0721234567', 'ZA', false ) );
+		// `XX` isn't a real region code; no `+` prefix → can't construct E.164.
+		$this->assertNull( Field_Submission_Dispatcher::dispatch( '0721234567', 'XX', false ) );
 	}
 
 	public function test_unsupported_region_with_plus_prefix_works(): void {
-		$payload = Field_Submission_Dispatcher::dispatch( '+27 72 123 4567', 'ZA', false );
+		$payload = Field_Submission_Dispatcher::dispatch( '+27 72 123 4567', 'XX', false );
 
 		$this->assertSame(
 			array(

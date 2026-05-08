@@ -62,6 +62,16 @@ npm run env:start
 
 Gravity Forms is not bundled (it's commercial); install it manually inside the wp-env WordPress to test the GF integration.
 
+### After pulling code that adds new classes
+
+The plugin loads its `BroadcasterGF\` classes via a Composer **classmap** autoloader (`broadcaster-auto-responder-for-gravity-forms/composer.json`). The classmap is generated as a static file at install time and does **not** auto-discover new files. After `git pull` brings in a commit that adds a new class under `includes/`, regenerate the classmap or new code will fatal at runtime with `Class "BroadcasterGF\\Foo\\Bar" not found`:
+
+```bash
+composer plugin:dump
+```
+
+The CI release workflow runs `composer install --no-dev --optimize-autoloader` inside the plugin folder before zipping, so released artifacts always carry a fresh classmap. This step is only needed in local dev when you've just pulled code that added classes.
+
 ## Quality checks
 
 The CI `quality-checks` workflow runs the same checks that block PR merges; run them locally before committing:

@@ -112,13 +112,16 @@ final class PhoneValidatorTest extends TestCase {
 	// --- Unsupported region ---
 
 	public function test_unsupported_region_national_format_rejected(): void {
-		// ZA (South Africa) isn't in the supported region list. Without a
-		// `+` prefix we can't construct E.164, so this fails closed.
-		$this->assertNull( Phone_Validator::normalize( '0721234567', 'ZA' ) );
+		// `XX` is not a real region code. Without a `+` prefix we can't
+		// construct E.164, so this fails closed for any region not in the
+		// supported list.
+		$this->assertNull( Phone_Validator::normalize( '0721234567', 'XX' ) );
 	}
 
 	public function test_unsupported_region_with_plus_prefix_accepted(): void {
-		$this->assertSame( '+27721234567', Phone_Validator::normalize( '+27 72 123 4567', 'ZA' ) );
+		// Even with an unknown region, an explicit `+` prefix passes the
+		// E.164 shape check and is kept as-is.
+		$this->assertSame( '+27721234567', Phone_Validator::normalize( '+27 72 123 4567', 'XX' ) );
 	}
 
 	// --- Empty / blank ---
@@ -149,7 +152,7 @@ final class PhoneValidatorTest extends TestCase {
 	}
 
 	public function test_dialling_code_returns_null_for_unsupported_region(): void {
-		$this->assertNull( Phone_Validator::dialling_code( 'ZA' ) );
+		$this->assertNull( Phone_Validator::dialling_code( 'XX' ) );
 	}
 
 	public function test_dialling_code_case_insensitive(): void {

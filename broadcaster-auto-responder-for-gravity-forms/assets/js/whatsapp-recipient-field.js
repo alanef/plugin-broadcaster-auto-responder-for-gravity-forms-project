@@ -18,17 +18,30 @@
 ( function () {
 	'use strict';
 
-	// Per-region phone rules — keep in lockstep with Phone_Validator's
-	// PHP rules array. Field type 'whatsapp_recipient' carries the chosen
-	// region as a data attribute.
-	var REGIONS = {
-		GB: { pattern: /^0[1-9]\d{9}$/, strip: /^0/, cc: '44' },
-		IE: { pattern: /^0[1-9]\d{7,8}$/, strip: /^0/, cc: '353' },
-		AU: { pattern: /^0[2-478]\d{8}$/, strip: /^0/, cc: '61' },
-		ID: { pattern: /^0\d{8,11}$/, strip: /^0/, cc: '62' },
-		US: { pattern: /^1?[2-9]\d{9}$/, strip: /^1/, cc: '1' },
-		IN: { pattern: /^[6-9]\d{9}$/, strip: null, cc: '91' }
-	};
+	// Per-region phone rules are served from PHP via wp_localize_script
+	// (`BroadcasterGFRecipientFieldL10n.regions`) so a single PHP source
+	// of truth (Phone_Validator::js_rules) drives both PHP and JS
+	// validation. The fallback to {} keeps the file useful in cases
+	// where it's loaded without the L10N (no field on the page) — every
+	// region lookup just returns null and the validator falls back to
+	// E.164-shape only on `+`-prefixed input.
+	function getRegionRule( region ) {
+		var l10n = window.BroadcasterGFRecipientFieldL10n || {};
+		var data = l10n.regions || {};
+		var entry = data[ String( region || '' ).toUpperCase() ];
+		if ( ! entry ) {
+			return null;
+		}
+		// Compile-once cache.
+		if ( ! entry._compiled ) {
+			entry._compiled = {
+				pattern: new RegExp( entry.pattern ),
+				strip: entry.strip ? new RegExp( entry.strip ) : null,
+				cc: entry.cc
+			};
+		}
+		return entry._compiled;
+	}
 
 	// Username TLD blocklist — Meta's enumerated list + Broadcaster's extras.
 	var USERNAME_TLDS = [
@@ -56,7 +69,7 @@
 		if ( cleaned.charAt( 0 ) === '+' ) {
 			return /^\+[1-9]\d{6,14}$/.test( cleaned ) ? cleaned : null;
 		}
-		var rule = REGIONS[ String( region || '' ).toUpperCase() ];
+		var rule = getRegionRule( region );
 		if ( ! rule ) {
 			return null;
 		}
