@@ -42,6 +42,7 @@ The plugin lives in its own sibling repo to keep WordPress.org packaging concern
 * **Production locks the Broadcaster URL.** When `wp_get_environment_type() === 'production'` the API URL field is hidden and the plugin always calls `https://getbroadcaster.com`. On dev/staging/local the URL is editable but pre-filled with the same default so a fresh install is functional immediately.
 * **Settings live under Gravity Forms.** *Forms → Settings → Broadcaster*, not a standalone WP options page. The API key field uses GF's `feedback_callback` for the inline ✓/✗ indicator and a labelled status line below the field; both share a per-request connection-test cache that's invalidated on save.
 * **Failures never block Gravity Forms.** `process_feed()` catches Broadcaster failures, logs them via `log_error()`, and returns the entry untouched. Form confirmations and notification emails proceed regardless.
+* **Username support is gated behind a feature flag.** The WhatsApp Recipient field's username surface — helper text mentioning the `@username` option, and acceptance of `@`-prefixed input — is only active when the `BROADCASTERGF_ENABLE_USERNAMES` PHP constant is `true`. Default is `false` because Meta has not yet enabled WhatsApp usernames generally. To exercise the full username path on a staging site, add `define( 'BROADCASTERGF_ENABLE_USERNAMES', true );` to `wp-config.php` before the plugin loads. The underlying code path (discriminator, validator, dispatcher) is built end-to-end in v1; the constant only gates the public-facing surface. Architectural rationale lives in `broadcaster-web/specification/BRO-902/design.md` (D12).
 
 ## Local development
 
@@ -60,6 +61,16 @@ npm run env:start
 ```
 
 Gravity Forms is not bundled (it's commercial); install it manually inside the wp-env WordPress to test the GF integration.
+
+### After pulling code that adds new classes
+
+The plugin loads its `BroadcasterGF\` classes via a Composer **classmap** autoloader (`broadcaster-auto-responder-for-gravity-forms/composer.json`). The classmap is generated as a static file at install time and does **not** auto-discover new files. After `git pull` brings in a commit that adds a new class under `includes/`, regenerate the classmap or new code will fatal at runtime with `Class "BroadcasterGF\\Foo\\Bar" not found`:
+
+```bash
+composer plugin:dump
+```
+
+The CI release workflow runs `composer install --no-dev --optimize-autoloader` inside the plugin folder before zipping, so released artifacts always carry a fresh classmap. This step is only needed in local dev when you've just pulled code that added classes.
 
 ## Quality checks
 

@@ -1,0 +1,52 @@
+/*
+ * Styles for the WhatsApp Recipient field.
+ *
+ * Minimal — relies on Gravity Forms' own input styling. Adds:
+ *   - subtle helper text below the input
+ *   - inline error message + invalid border on validation failure
+ *   - entry-detail rejection marker (when Broadcaster declined the recipient)
+ */
+
+.broadcastergf-recipient-helper {
+	display: block;
+	margin-top: 4px;
+	font-size: 0.875em;
+	color: #666;
+	line-height: 1.4;
+}
+
+.broadcastergf-recipient-error {
+	display: block;
+	margin-top: 4px;
+	color: #b32d2e;
+	font-weight: 600;
+	font-size: 0.9em;
+}
+
+.broadcastergf-recipient-invalid input[type="text"] {
+	border-color: #b32d2e;
+	box-shadow: 0 0 0 1px rgba( 179, 45, 46, 0.15 );
+}
+
+.broadcastergf-recipient-rejection {
+	margin-top: 8px;
+	padding: 8px 12px;
+	background: #fdf6f6;
+	border-left: 3px solid #b32d2e;
+	color: #4a0000;
+	font-size: 0.95em;
+	border-radius: 2px;
+}
+
+.broadcastergf-recipient-rejection strong {
+	display: inline-block;
+	margin-right: 4px;
+}
+
+.broadcastergf-recipient-rejection code {
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	background: rgba( 179, 45, 46, 0.08 );
+	padding: 1px 4px;
+	border-radius: 2px;
+	font-size: 0.9em;
+}
