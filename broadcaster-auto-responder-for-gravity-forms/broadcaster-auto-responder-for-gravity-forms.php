@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name:       Broadcaster Auto Responder for Gravity Forms
- * Plugin URI:        https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project
+ * Plugin URI:        https://getbroadcaster.com/
  * Description:       Sends Gravity Forms submissions to Broadcaster as incoming WhatsApp contact messages and triggers an optional template auto-response.
- * Version:           1.1.0
+ * Version:           1.1.1
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Fullworks
@@ -14,13 +14,27 @@
  * Domain Path:       /languages
  *
  * @package BroadcasterGF
+ *
+ * Ownership / affiliation note (for the WordPress.org Plugin Review Team):
+ *
+ * This plugin, the "Broadcaster" service it connects to (https://getbroadcaster.com),
+ * the "Fullworks" brand (https://fullworks.net) and Fullworks Plugins
+ * (https://fullworksplugins.com) are all owned and operated by Fullworks
+ * Digital Ltd, a company registered in England & Wales. "Broadcaster" is our
+ * own product — not a third party's — so there is no external affiliation to
+ * verify: this connector and the service it talks to are published by the same
+ * company, under the WordPress.org account "fullworks".
+ *
+ * "Gravity Forms" is a trademark of Rocketgenius, Inc. and "WhatsApp" is a
+ * trademark of Meta Platforms, Inc. This plugin is an independent, unofficial
+ * add-on and uses those names only to describe what it is compatible with.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BROADCASTERGF_VERSION', '1.1.0' );
+define( 'BROADCASTERGF_VERSION', '1.1.1' );
 define( 'BROADCASTERGF_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BROADCASTERGF_URL', plugin_dir_url( __FILE__ ) );
 define( 'BROADCASTERGF_BASENAME', plugin_basename( __FILE__ ) );

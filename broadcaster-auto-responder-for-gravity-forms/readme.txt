@@ -1,9 +1,9 @@
 === Broadcaster Auto Responder for Gravity Forms ===
-Contributors: alanef, fullworks
+Contributors: fullworks, alanfuller
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -30,9 +30,13 @@ If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, thi
 
 * It does **not** give you WhatsApp messaging. It just hands form submissions to your Broadcaster account, which is what actually talks to WhatsApp Business.
 * It does **not** create a Broadcaster account, manage templates, or open the WhatsApp customer-service window. Templates must already exist and be approved on the Broadcaster side.
-* It does **not** include phone-number normalization. Submit numbers in international format (`+44…`, `+1…`) where possible; otherwise Broadcaster's normalization rules apply on its side.
+* It does **not** do full phone-number validation. The **WhatsApp Recipient** field does normalise national-format numbers to international format (`+44…`, `+1…`) using the country you configure, and catches obvious typos before submit, but Broadcaster's own normalization rules remain the source of truth. For other field types, submit numbers in international format where possible.
 
-Broadcaster, Gravity Forms, and WhatsApp are independent products and are referenced here only for compatibility.
+= Ownership and affiliation =
+
+This plugin, the **Broadcaster** service it connects to ([getbroadcaster.com](https://getbroadcaster.com)), the **Fullworks** brand ([fullworks.net](https://fullworks.net)) and **Fullworks Plugins** ([fullworksplugins.com](https://fullworksplugins.com)) are all owned and operated by Fullworks Digital Ltd, a company registered in England and Wales — the same company that publishes this plugin on WordPress.org under the account "fullworks". Broadcaster is our own product, not a third party's.
+
+"Gravity Forms" is a trademark of Rocketgenius, Inc. and "WhatsApp" is a trademark of Meta Platforms, Inc. This plugin is an independent, unofficial add-on and uses those names only to describe what it is compatible with.
 
 == Installation ==
 
@@ -114,6 +118,13 @@ Broadcaster's phone normalization needs to know which country to interpret a nat
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.1.1 =
+* **WhatsApp Recipient field now has a Field Size setting.** Like other Gravity Forms fields, it now shows the Small / Medium / Large size control in the form editor's field settings; previously the size was fixed and could not be changed from the editor. New fields still default to Large.
+* **WhatsApp Recipient field can now be used in conditional logic.** It now appears in the "based on" field list when adding conditional logic to other fields, feeds, notifications and confirmations — e.g. show or hide another field depending on whether a WhatsApp recipient was entered. Previously the field was missing from those lists.
+* **National-format phone numbers are now shown — and stored — in international format.** When a submitter types a national-format number into a WhatsApp Recipient field and moves to the next field, the value is rewritten to international format (for example `07714681600` becomes `+447714681600`, using the field's or plugin's default country) so the country assumption is visible before submitting. The Gravity Forms entry, exports and the feed's recipient mapping then carry the international number. WhatsApp usernames (`@name`) are never altered — they are stored exactly as entered. If JavaScript is unavailable the number is still normalised when the entry is saved.
+* **Fixed:** uninstalling the plugin now removes its stored settings. A stale option name meant the connection, phone-country and related settings were previously left in the database after uninstall.
+* **Maintenance:** bundled the translation template (`.pot`), simplified how the add-on menu icon loads, refreshed the plugin home-page link, and added explicit ownership / trademark notes. No functional change.
 
 = 1.1.0 =
 * **New WhatsApp Recipient field.** A dedicated custom field type, under *Advanced Fields* in the Gravity Forms editor, that captures the contact's phone number in a single input and validates the format inline before form submission. Submitters see typos as a "Please enter a valid phone number" error and correct them on the spot, instead of having the form succeed and Broadcaster reject the lead silently downstream. Existing forms with stock Gravity Forms phone / text field mappings keep working exactly as before — the new field is opt-in.

@@ -71,7 +71,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 *
 	 * @var string
 	 */
-	protected $_url = 'https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project';
+	protected $_url = 'https://getbroadcaster.com/';
 
 	/**
 	 * Display title.
@@ -116,9 +116,15 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 	/**
 	 * Provide the SVG icon shown in the GF sidebar nav for this add-on.
+	 *
+	 * The markup lives in images/menu-icon.php (a file that `return`s the SVG
+	 * string) rather than a raw .svg read with file_get_contents(), so no
+	 * filesystem-read workaround is needed. `require` (not `require_once`) is
+	 * used because GF may call this more than once per request and we need the
+	 * string back each time, not `true`.
 	 */
 	public function get_menu_icon() {
-		return file_get_contents( $this->get_base_path() . '/images/menu-icon.svg' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		return require $this->get_base_path() . '/images/menu-icon.php';
 	}
 
 	/**

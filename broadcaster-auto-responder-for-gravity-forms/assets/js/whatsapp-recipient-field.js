@@ -220,6 +220,39 @@
 				clearError( container );
 			}
 		} );
+
+		// On blur, if the input holds a phone number we can confidently
+		// normalise, rewrite it to E.164 (+<cc><national>) so the
+		// internationalisation assumption is visible to the submitter —
+		// "07714681600" becomes "+447714681600" when they leave the field.
+		// The @username path (and anything we can't normalise) is left
+		// exactly as typed; `focusout` is used because `blur` doesn't
+		// bubble up to the form.
+		form.addEventListener( 'focusout', function ( event ) {
+			var target = event.target;
+			if ( ! target || ! target.closest || target.tagName !== 'INPUT' ) {
+				return;
+			}
+			var container = target.closest( '.broadcastergf-recipient-field' );
+			if ( ! container ) {
+				return;
+			}
+			var current = target.value.trim();
+			if ( current === '' ) {
+				return;
+			}
+			var usernamesEnabled = container.getAttribute( 'data-usernames-enabled' ) === '1';
+			// Only ever touch the phone branch — never @usernames.
+			if ( discriminate( current, usernamesEnabled ) !== 'phone' ) {
+				return;
+			}
+			var region = container.getAttribute( 'data-region' ) || 'GB';
+			var normalised = normalisePhone( current, region );
+			if ( normalised && normalised !== target.value ) {
+				target.value = normalised;
+				clearError( container );
+			}
+		} );
 	}
 
 	function init() {

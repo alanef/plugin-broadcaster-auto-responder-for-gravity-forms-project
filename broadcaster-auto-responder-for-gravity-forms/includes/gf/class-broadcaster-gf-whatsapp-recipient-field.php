@@ -97,12 +97,28 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 			'label_setting',
 			'label_placement_setting',
 			'admin_label_setting',
+			'size_setting',
 			'rules_setting',
 			'visibility_setting',
 			'description_setting',
 			'css_class_setting',
 			'broadcastergf_default_country_setting',
 		);
+	}
+
+	/**
+	 * Allow this field to participate in conditional logic rules.
+	 *
+	 * GF_Field's default is false, which is why a whatsapp_recipient field
+	 * never appeared in the "based on" dropdown when other fields, feeds,
+	 * notifications or confirmations were made conditional. The field stores
+	 * a plain string value under `input_{id}`, so GF_Field::is_value_match()
+	 * compares it correctly with no extra work.
+	 *
+	 * @return bool
+	 */
+	public function is_conditional_logic_supported() {
+		return true;
 	}
 
 	/**
@@ -204,6 +220,51 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 				? $this->errorMessage
 				: $default_message;
 		}
+	}
+
+	/**
+	 * Normalise the value written to the entry: phone input is stored in
+	 * E.164 (`+<cc><national>`) so the entry, exports and the feed's
+	 * recipient mapping all carry an unambiguous international number;
+	 * `@username` input — and anything Phone_Validator can't normalise —
+	 * is stored exactly as the submitter typed it.
+	 *
+	 * This mirrors the public-form blur behaviour (assets/js/whatsapp-recipient-field.js):
+	 * a JS-disabled or JS-bypassed submission still ends up with the same
+	 * normalised value on the entry. validate() has already run and rejected
+	 * anything Phone_Validator can't normalise, so the raw-value fallback
+	 * below is only ever reached as defence-in-depth.
+	 *
+	 * Note: the `@username` value is stored verbatim (with the `@`, original
+	 * casing) — the lowercase/strip the dispatcher applies is for the
+	 * Broadcaster API payload, not the stored entry value.
+	 *
+	 * @param string $value      Posted field value.
+	 * @param array  $form       Form object.
+	 * @param string $input_name Input name (`input_{id}`).
+	 * @param int    $lead_id    Entry ID.
+	 * @param array  $lead       Entry object.
+	 * @return string Value to persist on the entry.
+	 */
+	public function get_value_save_entry( $value, $form, $input_name, $lead_id, $lead ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+		if ( ! is_string( $value ) ) {
+			return $value;
+		}
+
+		$raw = trim( $value );
+		if ( '' === $raw ) {
+			return $value;
+		}
+
+		// `@username` (or `@`-prefixed input that validate() already
+		// rejected) → store exactly as typed.
+		if ( '@' === $raw[0] ) {
+			return $value;
+		}
+
+		$e164 = \BroadcasterGF\GF\Phone_Validator::normalize( $raw, $this->resolve_default_country() );
+
+		return ( null !== $e164 ) ? $e164 : $value;
 	}
 
 	/**
