@@ -162,9 +162,22 @@ final class Api_Rejection_Surfacer {
 			return $api_response['error_code'];
 		}
 
-		if ( isset( $api_response['response']['auto_response']['error_code'] ) ) {
-			$code = $api_response['response']['auto_response']['error_code'];
-			return is_string( $code ) ? $code : null;
+		// BRO-905: auto_response lives under `data` in the response body
+		// ({ success, data: { ... auto_response } }); check there, then the
+		// (legacy) top-level position, so the Surfacer is correct even if the
+		// Client's top-level error_code lift hasn't run.
+		foreach ( array( array( 'response', 'data', 'auto_response', 'error_code' ), array( 'response', 'auto_response', 'error_code' ) ) as $path ) {
+			$node = $api_response;
+			foreach ( $path as $key ) {
+				if ( ! is_array( $node ) || ! isset( $node[ $key ] ) ) {
+					$node = null;
+					break;
+				}
+				$node = $node[ $key ];
+			}
+			if ( is_string( $node ) ) {
+				return $node;
+			}
 		}
 
 		return null;

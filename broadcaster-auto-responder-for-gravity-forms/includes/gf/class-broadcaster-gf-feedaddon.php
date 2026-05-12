@@ -592,17 +592,42 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$is_wr_reject = $is_wr_field && \BroadcasterGF\GF\Api_Rejection_Surfacer::is_rejection( $result );
 
 		if ( $result['ok'] ) {
-			$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster accepted entry %s (HTTP %d).', $feed_id, $entry_id, (int) $result['http_code'] ) );
-			\GFAPI::add_note(
-				(int) $entry_id,
-				0,
-				'Broadcaster',
-				sprintf(
+			// BRO-905: surface what Broadcaster did with the auto-response, not
+			// just "received". $result['auto_response'] is the response body's
+			// data.auto_response block — null when no template was configured on
+			// the feed (in which case the existing "received" note still applies).
+			$auto = ( isset( $result['auto_response'] ) && is_array( $result['auto_response'] ) ) ? $result['auto_response'] : null;
+
+			if ( null === $auto ) {
+				$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster accepted entry %s (HTTP %d), no auto-response configured.', $feed_id, $entry_id, (int) $result['http_code'] ) );
+				$note = sprintf(
 					/* translators: %s: HTTP status code */
 					esc_html__( 'Broadcaster received this submission (HTTP %s).', 'broadcaster-auto-responder-for-gravity-forms' ),
 					$http_code
-				)
-			);
+				);
+			} elseif ( ! empty( $auto['success'] ) ) {
+				$template_name = isset( $auto['template_name'] ) ? (string) $auto['template_name'] : '';
+				$template_slot = isset( $auto['template_slot'] ) ? (string) $auto['template_slot'] : '';
+				$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster sent auto-response for entry %s (template=%s, slot=%s).', $feed_id, $entry_id, $template_name, $template_slot ) );
+				$note = sprintf(
+					/* translators: 1: WhatsApp template name, 2: template slot (in_hours or out_of_hours) */
+					esc_html__( 'Broadcaster received this submission and sent auto-response (%1$s, slot: %2$s).', 'broadcaster-auto-responder-for-gravity-forms' ),
+					$template_name,
+					$template_slot
+				);
+			} else {
+				$error_code = isset( $auto['error_code'] ) ? (string) $auto['error_code'] : 'unknown';
+				$error_msg  = isset( $auto['error'] ) ? (string) $auto['error'] : '';
+				$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster auto-response FAILED for entry %s: %s — %s', $feed_id, $entry_id, $error_code, $error_msg ) );
+				$note = sprintf(
+					/* translators: 1: auto-response error code, 2: human-readable error message */
+					esc_html__( 'Broadcaster received this submission but auto-response failed: %1$s — %2$s', 'broadcaster-auto-responder-for-gravity-forms' ),
+					$error_code,
+					$error_msg
+				);
+			}
+
+			\GFAPI::add_note( (int) $entry_id, 0, 'Broadcaster', $note );
 		} else {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s — Broadcaster dispatch failed for entry %s: %s', $feed_id, $entry_id, $result['message'] ) );
 

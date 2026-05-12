@@ -50,6 +50,17 @@ final class ApiRejectionSurfacerTest extends TestCase {
 		$this->assertTrue( Api_Rejection_Surfacer::is_rejection( $response ) );
 	}
 
+	public function test_recipient_not_deliverable_extracted_from_data_auto_response(): void {
+		// BRO-905: real API body shape — auto_response lives under `data`.
+		$response = array(
+			'ok'        => true,
+			'http_code' => 201,
+			'message'   => 'Accepted',
+			'response'  => array( 'success' => true, 'data' => array( 'auto_response' => array( 'error_code' => 'recipient_not_deliverable' ) ) ),
+		);
+		$this->assertTrue( Api_Rejection_Surfacer::is_rejection( $response ) );
+	}
+
 	public function test_clean_success_is_not_rejection(): void {
 		$response = array(
 			'ok'        => true,
