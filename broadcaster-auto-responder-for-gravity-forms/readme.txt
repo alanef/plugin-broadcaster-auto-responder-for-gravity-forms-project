@@ -3,7 +3,7 @@ Contributors: fullworks, alanfuller
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -118,6 +118,10 @@ Broadcaster's phone normalization needs to know which country to interpret a nat
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.1.2 =
+* **The auto-response outcome is now visible in Gravity Forms.** After Broadcaster accepts a submission, the plugin reads the `auto_response` block from the response and writes a clearer entry note: "sent auto-response (`<template>`, slot: `<in_hours|out_of_hours>`)" when the reply went out, "auto-response failed: `<error_code>` — `<message>`" when Broadcaster declined to send it (e.g. a missing template placeholder or an unapproved template), or the existing "received this submission (HTTP 201)." when the feed has no template configured. The full result is also logged under *Forms → Settings → Logging* with the entry ID for correlation.
+* **Fixed:** the API response body was parsed from the wrong path, so the `auto_response` error code (used by the WhatsApp Recipient field rejection notices) was never actually read. It now reads `data.auto_response` correctly, so recipient rejections through a WhatsApp Recipient field surface inline as intended.
 
 = 1.1.1 =
 * **WhatsApp Recipient field now has a Field Size setting.** Like other Gravity Forms fields, it now shows the Small / Medium / Large size control in the form editor's field settings; previously the size was fixed and could not be changed from the editor. New fields still default to Large.
