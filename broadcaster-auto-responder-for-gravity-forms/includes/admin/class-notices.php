@@ -14,8 +14,11 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Surfaces missing-Gravity-Forms and missing-config warnings to admins.
  *
- * Notices appear on every admin screen (so an admin who never visits the
- * settings page still sees them) but only for users who can act on them.
+ * Scoped (WP.org guideline 11) to the screens where the problem is
+ * actionable — the Plugins list, the Dashboard, and any Gravity Forms admin
+ * page — rather than every admin screen, and shown only to users who can act
+ * on them. Both notices also self-dismiss once the underlying condition is
+ * resolved (Gravity Forms activated / API key saved).
  */
 class Notices {
 
@@ -36,6 +39,10 @@ class Notices {
 			return;
 		}
 
+		if ( ! $this->is_relevant_screen() ) {
+			return;
+		}
+
 		if ( ! $this->gravity_forms_active() ) {
 			$this->render_gf_missing();
 			return;
@@ -44,6 +51,28 @@ class Notices {
 		if ( ! $this->api_configured() ) {
 			$this->render_not_configured();
 		}
+	}
+
+	/**
+	 * Limit the notice to screens where the admin can act on it: the Plugins
+	 * list and Dashboard (where you land right after activating), and any
+	 * Gravity Forms admin page (whose screen IDs all contain `gf_`, e.g.
+	 * `toplevel_page_gf_edit`, `forms_page_gf_settings`). Avoids the
+	 * guideline-11 "site-wide nag on every admin page" pattern.
+	 */
+	private function is_relevant_screen(): bool {
+		if ( ! function_exists( 'get_current_screen' ) ) {
+			return false;
+		}
+		$screen = get_current_screen();
+		if ( ! $screen instanceof \WP_Screen ) {
+			return false;
+		}
+		$id = (string) $screen->id;
+		if ( in_array( $id, array( 'plugins', 'plugins-network', 'dashboard', 'dashboard-network' ), true ) ) {
+			return true;
+		}
+		return false !== strpos( $id, 'gf_' );
 	}
 
 	/**

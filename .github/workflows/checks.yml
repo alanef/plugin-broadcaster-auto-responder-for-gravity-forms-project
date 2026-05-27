@@ -8,6 +8,43 @@ on:
   workflow_call:
 
 jobs:
+  unit-tests:
+    name: Unit tests · PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    # 8.4 / 8.5 are signal-only: the suite is pinned to PHPUnit 9.x (the only
+    # line that still runs on the plugin's PHP 7.4 floor, and EOL since Feb
+    # 2025), and tests/phpunit-unit.xml.dist uses PHPUnit-9-only schema, so the
+    # runner can be 8.5 but PHPUnit can't reliably execute there. These legs
+    # don't gate the build until the PHPUnit stack is modernised.
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+        include:
+          - php: '8.4'
+            experimental: true
+          - php: '8.5'
+            experimental: true
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup PHP ${{ matrix.php }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        tools: composer:v2
+        coverage: none
+
+    # composer.json pins platform.php to 7.4, so dependency resolution installs
+    # the PHPUnit 9.6 / WPCS set identically on every leg regardless of runner.
+    - name: Install dev dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run unit test suite
+      run: composer run-script test:unit
+
   quality-checks:
     runs-on: ubuntu-latest
     

@@ -151,6 +151,38 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 
 		$disabled = $this->is_form_editor() ? 'disabled="disabled"' : '';
 		$required = ! empty( $this->isRequired ) ? 'aria-required="true"' : '';
+
+		/*
+		 * $tabindex is a COMPLETE, pre-built HTML attribute fragment — e.g.
+		 * the literal string `tabindex='3'` (or an empty string when GF has
+		 * tabindexing switched off) — NOT a bare value. It is emitted below
+		 * (placeholder %7$s) without an escaping function, which is correct
+		 * and safe for three independent reasons:
+		 *
+		 *   1. The value is not user input. GF_Field::get_tabindex() returns
+		 *      sprintf( "tabindex='%d'", $n ), where $n is GFCommon's internal
+		 *      per-form integer counter. The `%d` cast makes the only variable
+		 *      part an integer; no submitter- or request-derived string can
+		 *      reach it, so there is no injection surface to escape.
+		 *
+		 *   2. It cannot be escaped without being corrupted. Running a full
+		 *      attribute fragment through esc_attr() encodes the `=` and the
+		 *      single quotes — `tabindex='3'` becomes
+		 *      `tabindex=&#039;3&#039;` — which is invalid markup and breaks
+		 *      the attribute. esc_attr() is for attribute *values*, not whole
+		 *      `name='value'` pairs. There is no escaper whose contract fits a
+		 *      ready-made attribute fragment.
+		 *
+		 *   3. This is the canonical Gravity Forms pattern. GF core and every
+		 *      shipped GF field render get_tabindex() exactly this way; mirroring
+		 *      it keeps tab-order behaviour consistent with the rest of the form.
+		 *
+		 * The adjacent %8$s ($disabled) and %9$s ($required) are likewise whole
+		 * attribute fragments, but built here from hard-coded string literals,
+		 * so PHPCS already recognises them as safe and they need no annotation.
+		 * Every genuinely dynamic value in the sprintf — $region, $input_id,
+		 * $value, $css_class — is passed through esc_attr() at the call site.
+		 */
 		$tabindex = $this->get_tabindex();
 		// GF text-field standard sizing: 'small' | 'medium' | 'large'. Falls
 		// back to 'large' to suit a phone-shaped input.
@@ -172,7 +204,7 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 			esc_attr( $input_id ),
 			$value_attr,
 			esc_attr( $css_class ),
-			$tabindex, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_tabindex returns trusted markup.
+			$tabindex, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- GF_Field::get_tabindex() returns a trusted, integer-derived attribute fragment that must not be re-escaped; see the detailed rationale where $tabindex is assigned above.
 			$disabled,
 			$required
 		);
@@ -412,13 +444,11 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 		$dialling            = \BroadcasterGF\GF\Phone_Validator::dialling_code( $plugin_country );
 		$default_description = self::build_helper_text_static( $dialling, $usernames_enabled );
 
-		$label_js       = esc_js( $default_label );
-		$description_js = esc_js( $default_description );
 		?>
 		<script type="text/javascript">
 			function SetDefaultValues_whatsapp_recipient( field ) {
-				field.label       = '<?php echo $label_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_js applied above. ?>';
-				field.description = '<?php echo $description_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_js applied above. ?>';
+				field.label       = '<?php echo esc_js( $default_label ); ?>';
+				field.description = '<?php echo esc_js( $default_description ); ?>';
 				field.size        = 'large';
 			}
 

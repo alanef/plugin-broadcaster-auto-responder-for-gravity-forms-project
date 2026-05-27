@@ -2,8 +2,8 @@
 Contributors: fullworks, alanfuller
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
-Tested up to: 6.9
-Stable tag: 1.1.2
+Tested up to: 7.0
+Stable tag: 1.1.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -15,6 +15,8 @@ Forward Gravity Forms submissions to Broadcaster (paid WhatsApp business platfor
 **This is a connector plugin for [Broadcaster](https://getbroadcaster.com), a paid SaaS platform for business WhatsApp management. It is not a free WhatsApp integration — it requires an active Broadcaster account.** If you do not have one, this plugin will not do anything useful on its own.
 
 If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, this plugin forwards each form submission into your Broadcaster inbox as an incoming contact message, and can optionally trigger an approved WhatsApp template reply (in business hours, out of business hours, or both — Broadcaster picks based on your company's business-hours settings).
+
+**Full setup and configuration documentation:** [getbroadcaster.com/docs/gravity-forms-addon](https://getbroadcaster.com/docs/gravity-forms-addon)
 
 = What it does =
 
@@ -37,6 +39,23 @@ If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, thi
 This plugin, the **Broadcaster** service it connects to ([getbroadcaster.com](https://getbroadcaster.com)), the **Fullworks** brand ([fullworks.net](https://fullworks.net)) and **Fullworks Plugins** ([fullworksplugins.com](https://fullworksplugins.com)) are all owned and operated by Fullworks Digital Ltd, a company registered in England and Wales — the same company that publishes this plugin on WordPress.org under the account "fullworks". Broadcaster is our own product, not a third party's.
 
 "Gravity Forms" is a trademark of Rocketgenius, Inc. and "WhatsApp" is a trademark of Meta Platforms, Inc. This plugin is an independent, unofficial add-on and uses those names only to describe what it is compatible with.
+
+== Privacy ==
+
+This plugin is a connector to **Broadcaster** ([getbroadcaster.com](https://getbroadcaster.com)), a third-party WhatsApp business-messaging platform operated by Fullworks Digital Ltd. When you connect a Gravity Form to Broadcaster and a submission is received, the plugin transmits the following personal data from that submission to Broadcaster's servers:
+
+* The contact's phone number and/or WhatsApp username (as mapped in the feed).
+* The submitter's name, when a name field is mapped.
+* The message text and any form-field values you include in the message body or template placeholders.
+* A form identifier and source label used to attribute the message inside Broadcaster.
+
+Data is sent **only** for forms you have explicitly connected to Broadcaster, and **only** when a Broadcaster API key is configured. No data is sent before then, and the plugin contacts no other external service. Nothing is collected for the plugin's own purposes — no telemetry, analytics, or tracking.
+
+Broadcaster processes the data it receives under its own [Privacy Policy](https://getbroadcaster.com/privacy) and [Terms of Use](https://getbroadcaster.com/terms). The plugin also registers suggested disclosure text under **Settings → Privacy** in WordPress, so you can fold this data flow into your site's own privacy policy.
+
+== Source Code ==
+
+This plugin ships its complete, unminified PHP, JavaScript and CSS source inside the distributed package — there is no separate obfuscation or minification build step, so the code you run is exactly the code you can read. For support or to report an issue, use the plugin's support forum on WordPress.org.
 
 == Installation ==
 
@@ -118,6 +137,11 @@ Broadcaster's phone normalization needs to know which country to interpret a nat
 (Screenshots are not yet bundled with this release.)
 
 == Changelog ==
+
+= 1.1.3 =
+* **Privacy disclosure.** Added a Privacy section to this readme spelling out exactly what submission data is sent to Broadcaster, and registered suggested privacy-policy text in WordPress (*Settings → Privacy*) so site owners can disclose the data flow to their visitors. The plugin's data handling is unchanged — this surfaces what already happens.
+* **Admin notices are now scoped.** The "Gravity Forms not active" and "API key not configured" warnings now appear only on the Plugins list, Dashboard, and Gravity Forms admin pages — where they're actionable — instead of on every admin screen. Both still disappear automatically once resolved.
+* **Maintenance:** pointed the plugin / add-on link at the documentation page (`getbroadcaster.com/docs/gravity-forms-addon`), inlined output escaping in the form-editor inline script, and documented why the Gravity Forms tab-index attribute is emitted as-is. No functional change.
 
 = 1.1.2 =
 * **The auto-response outcome is now visible in Gravity Forms.** After Broadcaster accepts a submission, the plugin reads the `auto_response` block from the response and writes a clearer entry note: "sent auto-response (`<template>`, slot: `<in_hours|out_of_hours>`)" when the reply went out, "auto-response failed: `<error_code>` — `<message>`" when Broadcaster declined to send it (e.g. a missing template placeholder or an unapproved template), or the existing "received this submission (HTTP 201)." when the feed has no template configured. The full result is also logged under *Forms → Settings → Logging* with the entry ID for correlation.

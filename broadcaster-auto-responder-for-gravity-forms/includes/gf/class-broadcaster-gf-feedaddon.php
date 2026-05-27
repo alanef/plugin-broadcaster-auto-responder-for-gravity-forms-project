@@ -71,7 +71,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 *
 	 * @var string
 	 */
-	protected $_url = 'https://getbroadcaster.com/';
+	protected $_url = 'https://getbroadcaster.com/docs/gravity-forms-addon';
 
 	/**
 	 * Display title.
