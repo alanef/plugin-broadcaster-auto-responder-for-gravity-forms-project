@@ -103,7 +103,15 @@ jobs:
         fi
 
     - name: Install WP-CLI dist-archive command
-      run: wp package install wp-cli/dist-archive-command:v3.1.0
+      env:
+        GITHUB_TOKEN: ""
+      run: |
+        # setup-php stores the Actions ghs_ token in composer's github-oauth, and
+        # composer rejects the underscore in that token format ("invalid
+        # characters"), breaking `wp package install` whenever the package isn't
+        # already cached. Clear it and clone the (public) command anonymously.
+        composer config --global --unset github-oauth.github.com 2>/dev/null || true
+        wp package install wp-cli/dist-archive-command:v3.1.0
 
     - name: Build plugin
       run: |
