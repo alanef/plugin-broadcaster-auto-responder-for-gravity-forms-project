@@ -359,17 +359,42 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			return '';
 		}
 		if ( $result['ok'] ) {
-			return '<p style="margin:6px 0 0;color:#1e7e34;"><strong>'
+			return '<p class="broadcastergf-connection-status broadcastergf-connection-status--ok"><strong>'
 				. esc_html__( '✓ Connected.', 'broadcaster-auto-responder-for-gravity-forms' )
 				. '</strong> '
 				. esc_html__( 'Broadcaster accepted the API key.', 'broadcaster-auto-responder-for-gravity-forms' )
 				. '</p>';
 		}
-		return '<p style="margin:6px 0 0;color:#b32d2e;"><strong>'
+		return '<p class="broadcastergf-connection-status broadcastergf-connection-status--error"><strong>'
 			. esc_html__( '✗ Not connected.', 'broadcaster-auto-responder-for-gravity-forms' )
 			. '</strong> '
 			. esc_html( $result['message'] )
 			. '</p>';
+	}
+
+	/**
+	 * Register the admin stylesheet for the connection-status colours.
+	 *
+	 * Uses the Gravity Forms add-on styles() mechanism so GF handles page
+	 * detection; the sheet loads only on this add-on's plugin-settings tab.
+	 * Replaces the inline style attributes render_connection_status() used to
+	 * emit, per the WordPress.org guideline that CSS be enqueued, not inline.
+	 *
+	 * @return array
+	 */
+	public function styles() {
+		$styles = array(
+			array(
+				'handle'  => 'broadcastergf-admin',
+				'src'     => BROADCASTERGF_URL . 'assets/css/admin.css',
+				'version' => BROADCASTERGF_VERSION,
+				'enqueue' => array(
+					array( 'admin_page' => array( 'plugin_settings' ) ),
+				),
+			),
+		);
+
+		return array_merge( parent::styles(), $styles );
 	}
 
 	/**
@@ -606,8 +631,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 					$http_code
 				);
 			} elseif ( ! empty( $auto['success'] ) ) {
-				$template_name = isset( $auto['template_name'] ) ? (string) $auto['template_name'] : '';
-				$template_slot = isset( $auto['template_slot'] ) ? (string) $auto['template_slot'] : '';
+				$template_name = isset( $auto['template_name'] ) ? sanitize_text_field( (string) $auto['template_name'] ) : '';
+				$template_slot = isset( $auto['template_slot'] ) ? sanitize_text_field( (string) $auto['template_slot'] ) : '';
 				$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster sent auto-response for entry %s (template=%s, slot=%s).', $feed_id, $entry_id, $template_name, $template_slot ) );
 				$note = sprintf(
 					/* translators: 1: WhatsApp template name, 2: template slot (in_hours or out_of_hours) */
@@ -616,8 +641,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 					$template_slot
 				);
 			} else {
-				$error_code = isset( $auto['error_code'] ) ? (string) $auto['error_code'] : 'unknown';
-				$error_msg  = isset( $auto['error'] ) ? (string) $auto['error'] : '';
+				$error_code = isset( $auto['error_code'] ) ? sanitize_text_field( (string) $auto['error_code'] ) : 'unknown';
+				$error_msg  = isset( $auto['error'] ) ? sanitize_text_field( (string) $auto['error'] ) : '';
 				$this->log_debug( __METHOD__ . sprintf( '(): feed %s — Broadcaster auto-response FAILED for entry %s: %s — %s', $feed_id, $entry_id, $error_code, $error_msg ) );
 				$note = sprintf(
 					/* translators: 1: auto-response error code, 2: human-readable error message */

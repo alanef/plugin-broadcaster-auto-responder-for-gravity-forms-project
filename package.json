@@ -39,7 +39,7 @@
         "plugin:dump": "composer run-script plugin:dump"
     },
     "devDependencies": {
-        "@wordpress/env": "^9.0.0"
+        "@wordpress/env": "^10.38.0"
     },
     "engines": {
         "node": ">=18.0.0",

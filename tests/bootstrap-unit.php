@@ -39,6 +39,22 @@ if ( ! function_exists( 'esc_html__' ) ) {
 	}
 }
 
+/*
+ * Stand-in for sanitize_text_field() so classes that sanitise external data
+ * (e.g. Api_Rejection_Surfacer) can run without WP. Approximates core's
+ * behaviour: strip tags, convert newlines/tabs to spaces, collapse runs of
+ * spaces, and trim. Clean single-spaced strings pass through unchanged.
+ */
+if ( ! function_exists( 'sanitize_text_field' ) ) {
+	function sanitize_text_field( $str ) {
+		$str = (string) $str;
+		$str = preg_replace( '/<[^>]*>/', '', $str );
+		$str = preg_replace( '/[\r\n\t]+/', ' ', $str );
+		$str = preg_replace( '/ {2,}/', ' ', $str );
+		return trim( $str );
+	}
+}
+
 // Load PHPUnit + dev tooling.
 $dev_autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
 if ( ! file_exists( $dev_autoload ) ) {

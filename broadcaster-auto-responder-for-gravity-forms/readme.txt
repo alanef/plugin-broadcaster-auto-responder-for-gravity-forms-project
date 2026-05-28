@@ -141,14 +141,6 @@ It's a custom field type this plugin adds, found under *Advanced Fields* in the 
 
 Broadcaster's phone normalization needs to know which country to interpret a national-format number against. The **WhatsApp Recipient** field handles this for you: configure a default country under *Forms → Settings → Broadcaster → Phone normalisation*, and the field assumes that country whenever a submitter types a national-format number (and overrides it whenever they type an explicit `+` international prefix). For stock Gravity Forms phone fields, configure the field to require international format, or rely on Broadcaster's company-level default phone country.
 
-== Screenshots ==
-
-1. *Forms → Settings → Broadcaster*: paste your API key, see live connection status.
-2. *Form Settings → Broadcaster*: per-form feed list.
-3. *Add New Feed*: field mappings, message text, in-hours / out-of-hours templates, conditional logic.
-
-(Screenshots are not yet bundled with this release.)
-
 == Changelog ==
 
 = 1.1.3 =

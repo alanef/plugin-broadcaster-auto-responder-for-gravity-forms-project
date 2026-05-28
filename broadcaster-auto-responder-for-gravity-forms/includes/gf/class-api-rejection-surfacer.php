@@ -137,12 +137,17 @@ final class Api_Rejection_Surfacer {
 
 		$message = '';
 		if ( isset( $api_response['message'] ) && is_string( $api_response['message'] ) ) {
-			$message = $api_response['message'];
+			$message = sanitize_text_field( $api_response['message'] );
+		}
+
+		$error_code = self::extract_error_code( $api_response );
+		if ( null !== $error_code ) {
+			$error_code = sanitize_text_field( $error_code );
 		}
 
 		return array(
 			'http_code'  => $http_code,
-			'error_code' => self::extract_error_code( $api_response ),
+			'error_code' => $error_code,
 			'message'    => $message,
 		);
 	}
