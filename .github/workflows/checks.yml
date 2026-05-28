@@ -156,11 +156,24 @@ jobs:
         echo "--- Plugin Check stderr ---"; cat pc-stderr.txt || true
         echo "--- Plugin Check results ---"; cat pc-results.json || true
 
-        # Fail closed: any ERROR/WARNING fails; unparseable output also fails
-        # (jq errors under set -e), so a broken run can never show green.
+        # With zero findings, plugin-check prints a plain-text
+        # "Checks complete. No errors found." line (not JSON) on stdout.
+        if grep -q "No errors found" pc-results.json; then
+          echo "Plugin Check: clean."
+          exit 0
+        fi
+
+        # Otherwise the output must be JSON findings. Fail closed if it is not
+        # parseable JSON (e.g. a broken environment) so a bad run can't show green.
+        if ! jq empty pc-results.json 2>/dev/null; then
+          echo "::error::Plugin Check produced no parseable results (see log above)"
+          exit 1
+        fi
+
         COUNT="$(jq '[.. | objects | select((.type? == "ERROR") or (.type? == "WARNING"))] | length' pc-results.json)"
         echo "Plugin Check error/warning count: ${COUNT}"
         if [ "${COUNT}" -gt 0 ]; then
           echo "::error::Plugin Check reported ${COUNT} issue(s)"
           exit 1
         fi
+        echo "Plugin Check: clean."
