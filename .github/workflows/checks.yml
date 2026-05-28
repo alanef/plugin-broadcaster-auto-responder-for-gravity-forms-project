@@ -111,7 +111,50 @@ jobs:
         mkdir tmp-build
         unzip dist/broadcaster-auto-responder-for-gravity-forms.zip -d tmp-build
 
-    - name: WordPress Plugin Check
-      uses: wordpress/plugin-check-action@v1
-      with:
-        build-dir: 'tmp-build/broadcaster-auto-responder-for-gravity-forms'
+    # NOTE: wordpress/plugin-check-action@v1 installs the *latest* @wordpress/env
+    # at runtime (`npm -g i @wordpress/env`, no version pin). 11.7.0 (2026-05-27)
+    # intermittently leaves the container "Environment not initialized" in CI, so
+    # we run Plugin Check by hand against the pinned, last-known-good 11.6.0.
+    - name: WordPress Plugin Check (pinned @wordpress/env)
+      run: |
+        set -euo pipefail
+        PLUGIN_SLUG="broadcaster-auto-responder-for-gravity-forms"
+        PLUGIN_DIR="$(realpath "tmp-build/${PLUGIN_SLUG}")"
+
+        npm -g --no-fund i @wordpress/env@11.6.0
+
+        cat > .wp-env.json <<EOF
+        { "core": null, "port": 8880, "testsPort": 8881, "plugins": [ "https://downloads.wordpress.org/plugin/plugin-check.zip" ], "mappings": { "wp-content/plugins/${PLUGIN_SLUG}": "${PLUGIN_DIR}" } }
+        EOF
+
+        # wp-env start can flake; retry, resetting between attempts.
+        started=0
+        for i in 1 2 3; do
+          if wp-env start --update; then started=1; break; fi
+          echo "wp-env start attempt $i failed; retrying..."
+          wp-env stop >/dev/null 2>&1 || true
+          sleep 5
+        done
+        [ "$started" = "1" ] || { echo "::error::wp-env failed to start"; exit 1; }
+
+        # Confirm the environment is actually usable before checking.
+        wp-env run cli wp cli info
+        wp-env run cli wp plugin activate "$PLUGIN_SLUG"
+
+        # Keep stdout as clean JSON; send wp-env's own chatter to a separate file.
+        wp-env run cli wp plugin check "$PLUGIN_SLUG" \
+          --format=json \
+          --exclude-files=.wp-env.json \
+          --require=./wp-content/plugins/plugin-check/cli.php \
+          > pc-results.json 2> pc-stderr.txt || true
+        echo "--- Plugin Check stderr ---"; cat pc-stderr.txt || true
+        echo "--- Plugin Check results ---"; cat pc-results.json || true
+
+        # Fail closed: any ERROR/WARNING fails; unparseable output also fails
+        # (jq errors under set -e), so a broken run can never show green.
+        COUNT="$(jq '[.. | objects | select((.type? == "ERROR") or (.type? == "WARNING"))] | length' pc-results.json)"
+        echo "Plugin Check error/warning count: ${COUNT}"
+        if [ "${COUNT}" -gt 0 ]; then
+          echo "::error::Plugin Check reported ${COUNT} issue(s)"
+          exit 1
+        fi
