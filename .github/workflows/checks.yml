@@ -8,6 +8,43 @@ on:
   workflow_call:
 
 jobs:
+  unit-tests:
+    name: Unit tests · PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    # 8.4 / 8.5 are signal-only: the suite is pinned to PHPUnit 9.x (the only
+    # line that still runs on the plugin's PHP 7.4 floor, and EOL since Feb
+    # 2025), and tests/phpunit-unit.xml.dist uses PHPUnit-9-only schema, so the
+    # runner can be 8.5 but PHPUnit can't reliably execute there. These legs
+    # don't gate the build until the PHPUnit stack is modernised.
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+        include:
+          - php: '8.4'
+            experimental: true
+          - php: '8.5'
+            experimental: true
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup PHP ${{ matrix.php }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        tools: composer:v2
+        coverage: none
+
+    # composer.json pins platform.php to 7.4, so dependency resolution installs
+    # the PHPUnit 9.6 / WPCS set identically on every leg regardless of runner.
+    - name: Install dev dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run unit test suite
+      run: composer run-script test:unit
+
   quality-checks:
     runs-on: ubuntu-latest
     
@@ -66,7 +103,22 @@ jobs:
         fi
 
     - name: Install WP-CLI dist-archive command
-      run: wp package install wp-cli/dist-archive-command:v3.1.0
+      env:
+        # WP-CLI's bundled Composer rejects the runner's ghs_ token when
+        # GitHub's longer stateless-token format is in play (its oauth-token
+        # validation fails on the format), which makes this step flake. The
+        # token is persisted in a config FILE by setup-php, so clearing env
+        # vars alone is not enough — strip the persisted github-oauth from
+        # every composer home (default + wp-cli's own) and clone the public
+        # command anonymously with empty Composer auth.
+        GITHUB_TOKEN: ""
+        COMPOSER_AUTH: "{}"
+      run: |
+        composer config --global --unset github-oauth.github.com 2>/dev/null || true
+        rm -f "$HOME/.composer/auth.json" \
+              "$HOME/.config/composer/auth.json" \
+              "$HOME/.wp-cli/packages/auth.json" 2>/dev/null || true
+        wp package install wp-cli/dist-archive-command:v3.1.0
 
     - name: Build plugin
       run: |
@@ -74,7 +126,63 @@ jobs:
         mkdir tmp-build
         unzip dist/broadcaster-auto-responder-for-gravity-forms.zip -d tmp-build
 
-    - name: WordPress Plugin Check
-      uses: wordpress/plugin-check-action@v1
-      with:
-        build-dir: 'tmp-build/broadcaster-auto-responder-for-gravity-forms'
+    # NOTE: wordpress/plugin-check-action@v1 installs the *latest* @wordpress/env
+    # at runtime (`npm -g i @wordpress/env`, no version pin). 11.7.0 (2026-05-27)
+    # intermittently leaves the container "Environment not initialized" in CI, so
+    # we run Plugin Check by hand against the pinned, last-known-good 11.6.0.
+    - name: WordPress Plugin Check (pinned @wordpress/env)
+      run: |
+        set -euo pipefail
+        PLUGIN_SLUG="broadcaster-auto-responder-for-gravity-forms"
+        PLUGIN_DIR="$(realpath "tmp-build/${PLUGIN_SLUG}")"
+
+        npm -g --no-fund i @wordpress/env@11.6.0
+
+        cat > .wp-env.json <<EOF
+        { "core": null, "port": 8880, "testsPort": 8881, "plugins": [ "https://downloads.wordpress.org/plugin/plugin-check.zip" ], "mappings": { "wp-content/plugins/${PLUGIN_SLUG}": "${PLUGIN_DIR}" } }
+        EOF
+
+        # wp-env start can flake; retry, resetting between attempts.
+        started=0
+        for i in 1 2 3; do
+          if wp-env start --update; then started=1; break; fi
+          echo "wp-env start attempt $i failed; retrying..."
+          wp-env stop >/dev/null 2>&1 || true
+          sleep 5
+        done
+        [ "$started" = "1" ] || { echo "::error::wp-env failed to start"; exit 1; }
+
+        # Confirm the environment is actually usable before checking.
+        wp-env run cli wp cli info
+        wp-env run cli wp plugin activate "$PLUGIN_SLUG"
+
+        # Keep stdout as clean JSON; send wp-env's own chatter to a separate file.
+        wp-env run cli wp plugin check "$PLUGIN_SLUG" \
+          --format=json \
+          --exclude-files=.wp-env.json \
+          --require=./wp-content/plugins/plugin-check/cli.php \
+          > pc-results.json 2> pc-stderr.txt || true
+        echo "--- Plugin Check stderr ---"; cat pc-stderr.txt || true
+        echo "--- Plugin Check results ---"; cat pc-results.json || true
+
+        # With zero findings, plugin-check prints a plain-text
+        # "Checks complete. No errors found." line (not JSON) on stdout.
+        if grep -q "No errors found" pc-results.json; then
+          echo "Plugin Check: clean."
+          exit 0
+        fi
+
+        # Otherwise the output must be JSON findings. Fail closed if it is not
+        # parseable JSON (e.g. a broken environment) so a bad run can't show green.
+        if ! jq empty pc-results.json 2>/dev/null; then
+          echo "::error::Plugin Check produced no parseable results (see log above)"
+          exit 1
+        fi
+
+        COUNT="$(jq '[.. | objects | select((.type? == "ERROR") or (.type? == "WARNING"))] | length' pc-results.json)"
+        echo "Plugin Check error/warning count: ${COUNT}"
+        if [ "${COUNT}" -gt 0 ]; then
+          echo "::error::Plugin Check reported ${COUNT} issue(s)"
+          exit 1
+        fi
+        echo "Plugin Check: clean."

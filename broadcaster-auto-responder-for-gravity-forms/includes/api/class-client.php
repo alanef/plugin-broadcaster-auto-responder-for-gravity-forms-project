@@ -123,14 +123,16 @@ class Client {
 	 * shape (BRO-883). Empty values are NOT stripped here — pass only the
 	 * keys you want sent.
 	 *
-	 * The return shape carries an optional `error_code` extracted from
-	 * `auto_response.error_code` when present (BRO-902). The API Rejection
-	 * Surfacer reads it to decide whether to surface a recipient rejection
-	 * without re-parsing the raw response body.
+	 * The return shape carries the `auto_response` block from the response
+	 * body (`data.auto_response`, BRO-905) and an `error_code` lifted from
+	 * `auto_response.error_code` when present (BRO-902). Callers use these to
+	 * surface the auto-response outcome / a recipient rejection without
+	 * re-parsing the raw response body. Both are null when no template was
+	 * configured on the feed or on a transport error.
 	 *
 	 * @param array $payload Payload matching the BRO-883 contract.
 	 *
-	 * @return array{ok:bool,http_code:int|null,message:string,response:array|null,error_code:string|null}
+	 * @return array{ok:bool,http_code:int|null,message:string,response:array|null,error_code:string|null,auto_response:array|null}
 	 */
 	public function send_incoming_message( array $payload ): array {
 		$endpoint = $this->base_url . '/api/v1/messages/incoming';
@@ -150,15 +152,16 @@ class Client {
 
 		if ( is_wp_error( $response ) ) {
 			return array(
-				'ok'         => false,
-				'http_code'  => null,
-				'message'    => sprintf(
+				'ok'            => false,
+				'http_code'     => null,
+				'message'       => sprintf(
 					/* translators: %s: low-level transport error message */
 					__( 'Transport error contacting Broadcaster: %s', 'broadcaster-auto-responder-for-gravity-forms' ),
 					$response->get_error_message()
 				),
-				'response'   => null,
-				'error_code' => null,
+				'response'      => null,
+				'error_code'    => null,
+				'auto_response' => null,
 			);
 		}
 
@@ -167,25 +170,35 @@ class Client {
 		$decoded     = json_decode( $body_string, true );
 		$body        = is_array( $decoded ) ? $decoded : null;
 
-		// BRO-902: lift the auto_response.error_code (when present) to a
-		// top-level key so callers like the API Rejection Surfacer can
-		// branch on it without re-parsing the response body.
+		// BRO-905: the API wraps the body as { success, data: { ... auto_response } },
+		// so auto_response lives under `data` — earlier code looked for it at the
+		// top level and therefore never found it (so error_code was always null).
+		// Read `data.auto_response` first; fall back to a top-level key defensively.
+		$auto_response = null;
+		if ( is_array( $body ) ) {
+			if ( isset( $body['data']['auto_response'] ) && is_array( $body['data']['auto_response'] ) ) {
+				$auto_response = $body['data']['auto_response'];
+			} elseif ( isset( $body['auto_response'] ) && is_array( $body['auto_response'] ) ) {
+				$auto_response = $body['auto_response'];
+			}
+		}
+
+		// BRO-902: lift auto_response.error_code (when present) to a top-level
+		// key so callers like the API Rejection Surfacer can branch on it
+		// without re-parsing the response body.
 		$error_code = null;
-		if (
-			is_array( $body )
-			&& isset( $body['auto_response']['error_code'] )
-			&& is_string( $body['auto_response']['error_code'] )
-		) {
-			$error_code = $body['auto_response']['error_code'];
+		if ( is_array( $auto_response ) && isset( $auto_response['error_code'] ) && is_string( $auto_response['error_code'] ) ) {
+			$error_code = $auto_response['error_code'];
 		}
 
 		if ( $code >= 200 && $code < 300 ) {
 			return array(
-				'ok'         => true,
-				'http_code'  => $code,
-				'message'    => __( 'Broadcaster accepted the message.', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'response'   => $body,
-				'error_code' => $error_code,
+				'ok'            => true,
+				'http_code'     => $code,
+				'message'       => __( 'Broadcaster accepted the message.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'response'      => $body,
+				'error_code'    => $error_code,
+				'auto_response' => $auto_response,
 			);
 		}
 
@@ -199,16 +212,17 @@ class Client {
 		}
 
 		return array(
-			'ok'         => false,
-			'http_code'  => $code,
-			'message'    => sprintf(
+			'ok'            => false,
+			'http_code'     => $code,
+			'message'       => sprintf(
 				/* translators: 1: HTTP status code, 2: detail message from Broadcaster */
 				__( 'Broadcaster rejected the message (HTTP %1$d). %2$s', 'broadcaster-auto-responder-for-gravity-forms' ),
 				$code,
 				$detail
 			),
-			'response'   => $body,
-			'error_code' => $error_code,
+			'response'      => $body,
+			'error_code'    => $error_code,
+			'auto_response' => $auto_response,
 		);
 	}
 }

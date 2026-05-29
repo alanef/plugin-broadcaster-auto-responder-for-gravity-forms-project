@@ -151,7 +151,7 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 
 		$disabled = $this->is_form_editor() ? 'disabled="disabled"' : '';
 		$required = ! empty( $this->isRequired ) ? 'aria-required="true"' : '';
-		$tabindex = $this->get_tabindex();
+
 		// GF text-field standard sizing: 'small' | 'medium' | 'large'. Falls
 		// back to 'large' to suit a phone-shaped input.
 		$size      = ! empty( $this->size ) ? (string) $this->size : 'large';
@@ -159,12 +159,20 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 
 		// The field's helper text is rendered by GF's standard
 		// `gfield_description` mechanism. SetDefaultValues_whatsapp_recipient
-		// (in get_form_editor_inline_script_on_page_render) sets a sensible
-		// default description at field-drop time; the form designer can edit
-		// it via the standard Description field setting.
+		// (in the enqueued editor script) sets a sensible default description
+		// at field-drop time; the form designer can edit it via the standard
+		// Description field setting.
+		//
+		// No tabindex attribute is emitted — natural DOM source order is used,
+		// which both follows current accessibility guidance and avoids the only
+		// raw attribute fragment this field would otherwise output. $disabled
+		// and $required are whole attribute fragments too, but built here from
+		// hard-coded string literals (PHPCS recognises them as safe); every
+		// genuinely dynamic value — $region, $input_id, $value, $css_class — is
+		// passed through esc_attr() at the call site.
 		$container = sprintf(
 			'<div class="ginput_container ginput_container_text broadcastergf-recipient-field" data-region="%1$s" data-usernames-enabled="%2$s">' .
-				'<input type="text" name="input_%3$d" id="%4$s" value="%5$s" class="%6$s" %7$s %8$s %9$s />' .
+				'<input type="text" name="input_%3$d" id="%4$s" value="%5$s" class="%6$s" %7$s %8$s />' .
 			'</div>',
 			esc_attr( $region ),
 			$usernames_enabled ? '1' : '0',
@@ -172,7 +180,6 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 			esc_attr( $input_id ),
 			$value_attr,
 			esc_attr( $css_class ),
-			$tabindex, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_tabindex returns trusted markup.
 			$disabled,
 			$required
 		);
@@ -293,22 +300,6 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 		return 'GB';
 	}
 
-	/**
-	 * Build the inline helper text shown beneath the input.
-	 *
-	 * The wording is flag-conditional (D12): when the username surface is
-	 * off, the `@username` option is not mentioned. When the configured
-	 * region has no known dialling code (unsupported region), the helper
-	 * text steers the submitter toward an explicit `+` prefix instead.
-	 *
-	 * @param string|null $dialling Country dialling code without `+`, or null.
-	 * @param bool        $usernames_enabled Whether the username surface is on.
-	 * @return string Helper text.
-	 */
-	private function build_helper_text( $dialling, $usernames_enabled ) {
-		return self::build_helper_text_static( $dialling, $usernames_enabled );
-	}
-
 	// ---------------------------------------------------------------------
 	// Static hook handlers — registered by Broadcaster_GF_Bootstrap.
 	// ---------------------------------------------------------------------
@@ -334,7 +325,7 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 			<label for="broadcastergf_default_phone_country" class="section_label">
 				<?php esc_html_e( 'Default phone country (override)', 'broadcaster-auto-responder-for-gravity-forms' ); ?>
 			</label>
-			<select id="broadcastergf_default_phone_country" onchange="SetFieldProperty('defaultPhoneCountry', this.value);">
+			<select id="broadcastergf_default_phone_country">
 				<option value=""><?php esc_html_e( '— Use plugin default —', 'broadcaster-auto-responder-for-gravity-forms' ); ?></option>
 				<?php foreach ( \BroadcasterGF\GF\Phone_Validator::supported_regions() as $region_code => $region_info ) : ?>
 					<option value="<?php echo esc_attr( $region_code ); ?>">
@@ -359,36 +350,28 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 	}
 
 	/**
-	 * Inline JS for the form editor.
+	 * Enqueue the form-editor glue script on the Gravity Forms form editor.
 	 *
-	 * Hooked to `gform_editor_js` (registered in Broadcaster_GF_Bootstrap)
-	 * rather than overriding GF_Field::get_form_editor_inline_script_on_page_render
-	 * because the latter only fires when the form already has at least
-	 * one field of this type — meaning SetDefaultValues_whatsapp_recipient
-	 * wouldn't be defined before the FIRST drop, and the field would land
-	 * with GF's generic "Untitled" defaults.
+	 * Hooked to `admin_enqueue_scripts` (registered in Broadcaster_GF_Bootstrap).
+	 * Replaces the previous `gform_editor_js` inline script tag with a properly
+	 * enqueued file plus a wp_add_inline_script config payload, per the
+	 * WordPress.org guideline that JS must be included via wp_enqueue_*.
 	 *
-	 * gform_editor_js fires once per form-editor page load regardless of
-	 * which field types are on the form, so both:
-	 *
-	 *   1. SetDefaultValues_whatsapp_recipient(field) — sets the default
-	 *      label, description, and size when the field is first dropped.
-	 *   2. gform_load_field_settings handler — populates the per-field
-	 *      Default Country picker with the field's saved value when the
-	 *      sidebar opens for a whatsapp_recipient field.
-	 *
-	 * are reliably available from the very first interaction.
-	 *
-	 * Notably absent: any fieldSettings.whatsapp_recipient = '…' assignment.
-	 * GF auto-populates that internally from the array returned by
-	 * self::get_form_editor_field_settings(); doing it again in JS races
-	 * GF's own initialisation and breaks the form editor for ALL fields
-	 * when our script happens to run before form_editor.js initialises
-	 * the fieldSettings global.
+	 * The enqueued file defines SetDefaultValues_whatsapp_recipient (called by
+	 * GF when the field is dropped) and the gform_load_field_settings handler
+	 * (populates the per-field Default Country picker). Loading on the editor
+	 * page means both are available before the first field drop — the reason
+	 * the old code used gform_editor_js instead of
+	 * GF_Field::get_form_editor_inline_script_on_page_render, which only fires
+	 * once a field of this type already exists on the form.
 	 *
 	 * @return void
 	 */
-	public static function editor_inline_script() {
+	public static function enqueue_editor_assets() {
+		if ( ! class_exists( 'GFForms' ) || 'form_editor' !== \GFForms::get_page() ) {
+			return;
+		}
+
 		$usernames_enabled = (bool) BROADCASTERGF_ENABLE_USERNAMES;
 
 		// Default label is flag-conditional. The form designer can rename
@@ -412,31 +395,33 @@ class Broadcaster_GF_WhatsApp_Recipient_Field extends \GF_Field {
 		$dialling            = \BroadcasterGF\GF\Phone_Validator::dialling_code( $plugin_country );
 		$default_description = self::build_helper_text_static( $dialling, $usernames_enabled );
 
-		$label_js       = esc_js( $default_label );
-		$description_js = esc_js( $default_description );
-		?>
-		<script type="text/javascript">
-			function SetDefaultValues_whatsapp_recipient( field ) {
-				field.label       = '<?php echo $label_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_js applied above. ?>';
-				field.description = '<?php echo $description_js; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_js applied above. ?>';
-				field.size        = 'large';
-			}
+		wp_enqueue_script(
+			'broadcastergf-recipient-editor',
+			BROADCASTERGF_URL . 'assets/js/whatsapp-recipient-editor.js',
+			array( 'jquery' ),
+			BROADCASTERGF_VERSION,
+			true
+		);
 
-			jQuery( document ).on( 'gform_load_field_settings', function ( event, field ) {
-				if ( 'whatsapp_recipient' === field.type ) {
-					jQuery( '#broadcastergf_default_phone_country' ).val(
-						field.defaultPhoneCountry || ''
-					);
-				}
-			} );
-		</script>
-		<?php
+		wp_add_inline_script(
+			'broadcastergf-recipient-editor',
+			'window.BroadcasterGFRecipientEditor = ' . wp_json_encode(
+				array(
+					'defaultLabel'       => $default_label,
+					'defaultDescription' => $default_description,
+				)
+			) . ';',
+			'before'
+		);
 	}
 
 	/**
-	 * Static version of build_helper_text — same logic, no $this dependency.
-	 * Called from self::editor_inline_script() (a static method) and from
-	 * the instance-method version (kept for instance-context callers).
+	 * Build the inline helper text shown beneath the input.
+	 *
+	 * The wording is flag-conditional (D12): when the username surface is off,
+	 * the `@username` option is not mentioned; when the configured region has
+	 * no known dialling code, it steers the submitter toward an explicit `+`
+	 * prefix. Static (no $this) so enqueue_editor_assets() can call it.
 	 *
 	 * @param string|null $dialling Country dialling code without `+`, or null.
 	 * @param bool        $usernames_enabled Whether the username surface is on.

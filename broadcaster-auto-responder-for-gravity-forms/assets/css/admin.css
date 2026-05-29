@@ -1,0 +1,19 @@
+/**
+ * Admin styles for the Broadcaster plugin-settings page.
+ *
+ * Holds the connection-status colours that used to be inline style="" attributes
+ * on render_connection_status(), so the plugin includes its CSS via
+ * wp_enqueue_style (WordPress.org guideline) instead of inline attributes.
+ */
+
+.broadcastergf-connection-status {
+	margin: 6px 0 0;
+}
+
+.broadcastergf-connection-status--ok {
+	color: #1e7e34;
+}
+
+.broadcastergf-connection-status--error {
+	color: #b32d2e;
+}

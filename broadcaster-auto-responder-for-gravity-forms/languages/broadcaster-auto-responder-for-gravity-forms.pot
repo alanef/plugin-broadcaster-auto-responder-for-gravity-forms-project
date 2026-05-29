@@ -2,14 +2,14 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Broadcaster Auto Responder for Gravity Forms 1.1.1\n"
+"Project-Id-Version: Broadcaster Auto Responder for Gravity Forms 1.1.3\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/broadcaster-auto-responder-for-gravity-forms\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-05-11T18:01:07+00:00\n"
+"POT-Creation-Date: 2026-05-27T08:28:17+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.10.0\n"
 "X-Domain: broadcaster-auto-responder-for-gravity-forms\n"
@@ -21,7 +21,7 @@ msgstr ""
 
 #. Plugin URI of the plugin
 #: broadcaster-auto-responder-for-gravity-forms.php
-msgid "https://getbroadcaster.com/"
+msgid "https://getbroadcaster.com/docs/gravity-forms-addon"
 msgstr ""
 
 #. Description of the plugin
@@ -39,20 +39,20 @@ msgstr ""
 msgid "https://fullworks.net/"
 msgstr ""
 
-#: includes/admin/class-notices.php:82
-#: includes/admin/class-notices.php:93
+#: includes/admin/class-notices.php:111
+#: includes/admin/class-notices.php:122
 msgid "Broadcaster Auto Responder for Gravity Forms:"
 msgstr ""
 
-#: includes/admin/class-notices.php:83
+#: includes/admin/class-notices.php:112
 msgid "Gravity Forms is not active. The plugin will sit idle until Gravity Forms is installed and activated."
 msgstr ""
 
-#: includes/admin/class-notices.php:94
+#: includes/admin/class-notices.php:123
 msgid "Broadcaster API key is not configured."
 msgstr ""
 
-#: includes/admin/class-notices.php:96
+#: includes/admin/class-notices.php:125
 msgid "Configure now"
 msgstr ""
 
@@ -79,17 +79,50 @@ msgid "Unexpected response from Broadcaster (HTTP %d)."
 msgstr ""
 
 #. translators: %s: low-level transport error message
-#: includes/api/class-client.php:157
+#: includes/api/class-client.php:159
 msgid "Transport error contacting Broadcaster: %s"
 msgstr ""
 
-#: includes/api/class-client.php:186
+#: includes/api/class-client.php:198
 msgid "Broadcaster accepted the message."
 msgstr ""
 
 #. translators: 1: HTTP status code, 2: detail message from Broadcaster
-#: includes/api/class-client.php:206
+#: includes/api/class-client.php:219
 msgid "Broadcaster rejected the message (HTTP %1$d). %2$s"
+msgstr ""
+
+#: includes/class-plugin.php:81
+msgid "This information is added by the Broadcaster Auto Responder for Gravity Forms plugin and describes the personal data it sends to a third-party service."
+msgstr ""
+
+#: includes/class-plugin.php:84
+msgid "When this site forwards a Gravity Forms submission to Broadcaster — a WhatsApp business-messaging platform operated by Fullworks Digital Ltd — the following personal data from that submission is transmitted to Broadcaster's servers at getbroadcaster.com:"
+msgstr ""
+
+#: includes/class-plugin.php:87
+msgid "The contact's phone number and/or WhatsApp username, as mapped in the form's Broadcaster feed."
+msgstr ""
+
+#: includes/class-plugin.php:88
+msgid "The submitter's name, when a name field is mapped."
+msgstr ""
+
+#: includes/class-plugin.php:89
+msgid "The message text and any form-field values included in the mapped message body or template placeholders."
+msgstr ""
+
+#: includes/class-plugin.php:90
+msgid "A form identifier and source label used to attribute the message inside Broadcaster."
+msgstr ""
+
+#: includes/class-plugin.php:93
+msgid "This data is sent only for forms a site administrator has explicitly connected to Broadcaster, and only when a Broadcaster API key is configured. It is used to create an incoming contact message and, optionally, to trigger an approved WhatsApp template auto-response."
+msgstr ""
+
+#. translators: 1: opening <a> tag to Broadcaster privacy policy, 2: closing </a>, 3: opening <a> tag to Broadcaster terms of use, 4: closing </a>
+#: includes/class-plugin.php:98
+msgid "Broadcaster processes the data it receives under its own %1$sPrivacy Policy%2$s and %3$sTerms of Use%4$s."
 msgstr ""
 
 #. translators: 1: HTTP status code or 'n/a', 2: error_code or 'n/a', 3: human-readable message
@@ -107,7 +140,7 @@ msgstr ""
 
 #. translators: 1: country name, 2: dialling code without +
 #: includes/gf/class-broadcaster-gf-feedaddon.php:217
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:345
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:377
 msgid "%1$s (+%2$s)"
 msgstr ""
 
@@ -258,30 +291,40 @@ msgid "Out-of-hours template"
 msgstr ""
 
 #. translators: %s: HTTP status code
-#: includes/gf/class-broadcaster-gf-feedaddon.php:602
+#: includes/gf/class-broadcaster-gf-feedaddon.php:605
 msgid "Broadcaster received this submission (HTTP %s)."
 msgstr ""
 
+#. translators: 1: WhatsApp template name, 2: template slot (in_hours or out_of_hours)
+#: includes/gf/class-broadcaster-gf-feedaddon.php:614
+msgid "Broadcaster received this submission and sent auto-response (%1$s, slot: %2$s)."
+msgstr ""
+
+#. translators: 1: auto-response error code, 2: human-readable error message
+#: includes/gf/class-broadcaster-gf-feedaddon.php:624
+msgid "Broadcaster received this submission but auto-response failed: %1$s — %2$s"
+msgstr ""
+
 #. translators: 1: HTTP status code or 'n/a', 2: detail message from the API client
-#: includes/gf/class-broadcaster-gf-feedaddon.php:620
+#: includes/gf/class-broadcaster-gf-feedaddon.php:645
 msgid "Broadcaster did not receive this submission (HTTP %1$s). %2$s"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-feedaddon.php:850
+#: includes/gf/class-broadcaster-gf-feedaddon.php:875
 msgid "Map a recipient field."
 msgstr ""
 
 #. translators: %s: the malformed pair text
-#: includes/gf/class-broadcaster-gf-feedaddon.php:919
+#: includes/gf/class-broadcaster-gf-feedaddon.php:944
 msgid "Malformed placeholder pair (no colon): %s"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-feedaddon.php:931
+#: includes/gf/class-broadcaster-gf-feedaddon.php:956
 msgid "Empty placeholder key."
 msgstr ""
 
 #. translators: %s: the duplicated placeholder key
-#: includes/gf/class-broadcaster-gf-feedaddon.php:940
+#: includes/gf/class-broadcaster-gf-feedaddon.php:965
 msgid "Duplicate placeholder key: %s"
 msgstr ""
 
@@ -293,54 +336,54 @@ msgstr ""
 msgid "Captures a WhatsApp recipient — phone number, or a @username when WhatsApp usernames are enabled — in a single input. Validates format inline before submission."
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:217
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:551
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:249
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:581
 msgid "Please enter a valid phone number, or a WhatsApp username starting with @."
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:218
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:550
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:250
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:580
 msgid "Please enter a valid phone number."
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:335
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:367
 msgid "Default phone country (override)"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:338
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:370
 msgid "— Use plugin default —"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:355
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:387
 msgid "When the submitter types a national-format number, this is the country we will assume. Leave on \"Use plugin default\" unless this specific form targets a different country than the rest of the site."
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:397
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:429
 msgid "WhatsApp Number / Username"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:398
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:430
 msgid "WhatsApp Number"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:448
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:478
 msgid "Use international format starting with + — or enter a WhatsApp username starting with @"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:449
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:479
 msgid "Use international format starting with +"
 msgstr ""
 
 #. translators: %s: country dialling code without the + sign
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:455
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:485
 msgid "We'll assume +%s unless you start with + — or enter a WhatsApp username starting with @"
 msgstr ""
 
 #. translators: %s: country dialling code without the + sign
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:462
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:492
 msgid "We'll assume +%s unless you start with +"
 msgstr ""
 
-#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:508
+#: includes/gf/class-broadcaster-gf-whatsapp-recipient-field.php:538
 msgid "Broadcaster did not deliver to this recipient."
 msgstr ""

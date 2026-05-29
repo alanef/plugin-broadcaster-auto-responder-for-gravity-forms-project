@@ -37,8 +37,8 @@ class Broadcaster_GF_Bootstrap {
 			2
 		);
 		add_action(
-			'gform_editor_js',
-			array( '\Broadcaster_GF_WhatsApp_Recipient_Field', 'editor_inline_script' )
+			'admin_enqueue_scripts',
+			array( '\Broadcaster_GF_WhatsApp_Recipient_Field', 'enqueue_editor_assets' )
 		);
 		add_filter(
 			'gform_entry_field_value',
