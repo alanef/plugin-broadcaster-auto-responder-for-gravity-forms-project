@@ -3,7 +3,7 @@ Contributors: fullworks, alanfuller
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 7.0
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -142,6 +142,8 @@ It's a custom field type this plugin adds, found under *Advanced Fields* in the 
 Broadcaster's phone normalization needs to know which country to interpret a national-format number against. The **WhatsApp Recipient** field handles this for you: configure a default country under *Forms → Settings → Broadcaster → Phone normalisation*, and the field assumes that country whenever a submitter types a national-format number (and overrides it whenever they type an explicit `+` international prefix). For stock Gravity Forms phone fields, configure the field to require international format, or rely on Broadcaster's company-level default phone country.
 
 == Changelog ==
+= 1.1.5 =
+Wp Org release
 
 = 1.1.4 =
 * **WordPress.org compliance.** All admin JavaScript and CSS is now loaded through the standard WordPress enqueue functions instead of being printed inline. The form-editor helper script and the connection-status styling load via `wp_enqueue_script` / `wp_enqueue_style`; there is no change to how the plugin behaves.

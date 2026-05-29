@@ -18,7 +18,7 @@ jobs:
   release:
     needs: quality-checks
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v6
 
@@ -68,15 +68,15 @@ jobs:
       run: |
         # Use WP-CLI to build the plugin archive
         wp dist-archive ./broadcaster-auto-responder-for-gravity-forms ./broadcaster-auto-responder-for-gravity-forms.zip
-        
+
         # Create dist directory for consistency with build script
         mkdir -p dist
         mv broadcaster-auto-responder-for-gravity-forms.zip dist/
-        
+
         # Also rename with version for better release management
         PLUGIN_VERSION=$(grep -oP 'Version:\s*\K[0-9a-zA-Z.-]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php)
         cp dist/broadcaster-auto-responder-for-gravity-forms.zip "dist/broadcaster-auto-responder-for-gravity-forms-${PLUGIN_VERSION}.zip"
-        
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v3
       with:
@@ -97,3 +97,46 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Deploy to WordPress.org
+      env:
+        SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+        SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+      run: |
+        # Install subversion
+        sudo apt-get update
+        sudo apt-get install -y subversion
+
+        # Extract plugin to temporary directory
+        mkdir -p svn-tmp
+        cd svn-tmp
+        unzip ../zipped/fullworks-simple-setup-for-amazon-ses.zip
+
+        # Checkout SVN repository
+        svn checkout https://plugins.svn.wordpress.org/fullworks-simple-setup-for-amazon-ses/ svn-repo --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
+
+        # Copy files to trunk
+        rsync -av --delete --exclude='.svn' fullworks-simple-setup-for-amazon-ses/ svn-repo/trunk/
+
+        # Add new files and remove deleted files
+        cd svn-repo/trunk
+        svn add --force * --auto-props --parents --depth infinity -q || true
+        svn delete $( svn status | sed -e '/^!/!d' -e 's/^!//' ) || true
+
+        # Copy to tags
+        cd ..
+        svn cp trunk tags/${{ steps.get_version.outputs.VERSION }}
+
+        # Sync WordPress.org listing assets (banner / icon / screenshots).
+        # These live in /assets at the SVN root, alongside trunk and tags —
+        # they are NOT shipped to users.
+        if [ -d "$GITHUB_WORKSPACE/.wordpress-org" ]; then
+          mkdir -p assets
+          rsync -av --delete --exclude='.svn' --exclude='README.md' "$GITHUB_WORKSPACE/.wordpress-org/" assets/
+          svn add --force assets --auto-props --parents --depth infinity -q || true
+          svn delete $( svn status assets | sed -e '/^!/!d' -e 's/^!//' ) || true
+        fi
+
+        # Commit to SVN (covers trunk, tags and assets in one revision)
+        svn commit -m "Release version ${{ steps.get_version.outputs.VERSION }}" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
+
+        echo "✅ Successfully deployed to WordPress.org"
