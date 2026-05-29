@@ -106,21 +106,26 @@ jobs:
       env:
         SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
         SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        PLUGIN_SLUG: broadcaster-auto-responder-for-gravity-forms
       run: |
+        # Derive the release version from the pushed tag (strip leading "v").
+        VERSION=${GITHUB_REF#refs/tags/}
+        VERSION=${VERSION#v}
+
         # Install subversion
         sudo apt-get update
         sudo apt-get install -y subversion
 
-        # Extract plugin to temporary directory
+        # Extract plugin to temporary directory (zip built by the Build step in dist/)
         mkdir -p svn-tmp
         cd svn-tmp
-        unzip ../zipped/fullworks-simple-setup-for-amazon-ses.zip
+        unzip "../dist/${PLUGIN_SLUG}.zip"
 
         # Checkout SVN repository
-        svn checkout https://plugins.svn.wordpress.org/fullworks-simple-setup-for-amazon-ses/ svn-repo --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
+        svn checkout "https://plugins.svn.wordpress.org/${PLUGIN_SLUG}/" svn-repo --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
 
         # Copy files to trunk
-        rsync -av --delete --exclude='.svn' fullworks-simple-setup-for-amazon-ses/ svn-repo/trunk/
+        rsync -av --delete --exclude='.svn' "${PLUGIN_SLUG}/" svn-repo/trunk/
 
         # Add new files and remove deleted files
         cd svn-repo/trunk
@@ -129,7 +134,7 @@ jobs:
 
         # Copy to tags
         cd ..
-        svn cp trunk tags/${{ steps.get_version.outputs.VERSION }}
+        svn cp trunk "tags/${VERSION}"
 
         # Sync WordPress.org listing assets (banner / icon / screenshots).
         # These live in /assets at the SVN root, alongside trunk and tags —
@@ -142,6 +147,6 @@ jobs:
         fi
 
         # Commit to SVN (covers trunk, tags and assets in one revision)
-        svn commit -m "Release version ${{ steps.get_version.outputs.VERSION }}" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
+        svn commit -m "Release version ${VERSION}" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache
 
         echo "✅ Successfully deployed to WordPress.org"
