@@ -112,3 +112,35 @@ The `release.yml` GitHub Actions workflow runs the full quality-checks job, buil
 ## License
 
 GPL v2 or later (see [`LICENSE`](LICENSE)).
+
+<!-- tooling:start (managed by wordpress-plugin-boilerplate/tooling - do not edit by hand) -->
+## Development
+
+This repository uses the standard Fullworks free-plugin tooling, documented in
+[wordpress-plugin-boilerplate](https://github.com/alanef/wordpress-plugin-boilerplate/blob/main/CLAUDE.md).
+
+[![Plugin Check](https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project/actions/workflows/checks.yml/badge.svg)](https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project/actions/workflows/checks.yml)
+
+```
+plugin-broadcaster-auto-responder-for-gravity-forms-project/                     # repository root: development tooling
+├── .github/workflows/             # checks.yml on push/PR, release.yml on tag
+├── tests/                         # PHPUnit suite, run inside wp-env
+├── .wp-env.json                   # dev :8770, tests :8771
+├── composer.json                  # dev dependencies and quality scripts
+├── package.json                   # wp-env and test scripts
+├── phpunit.xml.dist / run-tests.sh
+└── broadcaster-auto-responder-for-gravity-forms/                # the plugin (shipped as-is via .distignore)
+```
+
+```bash
+composer install && npm install        # dev tools
+npm run start                          # http://localhost:8770  (admin / password)
+composer run check                     # PHPCompatibility + security sniffs
+npm test                               # PHPUnit in the wp-env tests container
+composer run build                     # zipped/broadcaster-auto-responder-for-gravity-forms-free.zip
+```
+
+Releases: set the version in the plugin header and `readme.txt`, update `CHANGELOG.md`,
+tag `vX.Y.Z` and push. CI builds the zip, creates the GitHub release and deploys to
+WordPress.org.
+<!-- tooling:end -->

@@ -1,188 +1,157 @@
-name: Quality Checks
+# Managed by wordpress-plugin-boilerplate/tooling - fix there first, then run bin/sync-tooling.sh
+name: Plugin Check
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
   pull_request:
-    branches: [ main, master ]
+    branches:
+      - main
   workflow_call:
 
+permissions:
+  contents: read
+
+env:
+  PLUGIN_DIR: broadcaster-auto-responder-for-gravity-forms
+  PLUGIN_FILE: broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php
+  VERSION_CONSTANT: "BROADCASTERGF_VERSION"
+
 jobs:
-  unit-tests:
-    name: Unit tests · PHP ${{ matrix.php }}
+  checks:
+    name: PHPCS, version consistency and Plugin Check
     runs-on: ubuntu-latest
-    # 8.4 / 8.5 are signal-only: the suite is pinned to PHPUnit 9.x (the only
-    # line that still runs on the plugin's PHP 7.4 floor, and EOL since Feb
-    # 2025), and tests/phpunit-unit.xml.dist uses PHPUnit-9-only schema, so the
-    # runner can be 8.5 but PHPUnit can't reliably execute there. These legs
-    # don't gate the build until the PHPUnit stack is modernised.
-    continue-on-error: ${{ matrix.experimental || false }}
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
-        include:
-          - php: '8.4'
-            experimental: true
-          - php: '8.5'
-            experimental: true
 
     steps:
-    - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup PHP ${{ matrix.php }}
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: ${{ matrix.php }}
-        tools: composer:v2
-        coverage: none
+      - name: Get required PHP version
+        id: php_version
+        run: |
+          PHP_VERSION=$(grep -m1 "Requires PHP:" "$PLUGIN_FILE" | sed -E 's/.*Requires PHP:[[:space:]]*//' | tr -d ' \r')
+          echo "PHP_VERSION=${PHP_VERSION:-7.4}" >> $GITHUB_OUTPUT
+          echo "Plugin requires PHP ${PHP_VERSION:-7.4}"
 
-    # composer.json pins platform.php to 7.4, so dependency resolution installs
-    # the PHPUnit 9.6 / WPCS set identically on every leg regardless of runner.
-    - name: Install dev dependencies
-      run: composer install --prefer-dist --no-progress
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ steps.php_version.outputs.PHP_VERSION }}
+          coverage: none
+          tools: composer, wp-cli
 
-    - name: Run unit test suite
-      run: composer run-script test:unit
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
 
-  quality-checks:
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run phpcs checks
+        run: composer run-script check
+
+      - name: Verify version consistency
+        run: |
+          PLUGIN_VERSION=$(grep -m1 -E "^[[:space:]]*\*?[[:space:]]*Version:" "$PLUGIN_FILE" | sed -E 's/.*Version:[[:space:]]*//' | tr -d ' \r')
+          README_VERSION=$(grep -m1 "Stable tag:" "$PLUGIN_DIR/readme.txt" | sed -E 's/.*Stable tag:[[:space:]]*//' | tr -d ' \r')
+
+          echo "Plugin header version: $PLUGIN_VERSION"
+          echo "Readme stable tag:     $README_VERSION"
+
+          if [ "$PLUGIN_VERSION" != "$README_VERSION" ]; then
+            echo "::error::Version mismatch between plugin header ($PLUGIN_VERSION) and readme.txt ($README_VERSION)"
+            exit 1
+          fi
+
+          if [ -n "$VERSION_CONSTANT" ]; then
+            CONSTANT_VERSION=$(grep -m1 "define.*$VERSION_CONSTANT" "$PLUGIN_FILE" | sed -E "s/.*['\"]([^'\"]+)['\"][[:space:]]*\).*/\1/")
+            echo "Version constant:      $CONSTANT_VERSION"
+            if [ "$PLUGIN_VERSION" != "$CONSTANT_VERSION" ]; then
+              echo "::error::Version mismatch between plugin header ($PLUGIN_VERSION) and $VERSION_CONSTANT ($CONSTANT_VERSION)"
+              exit 1
+            fi
+          fi
+          echo "All version numbers match: $PLUGIN_VERSION"
+
+      - name: Install WP-CLI dist-archive command
+        env:
+          # WP-CLI bundles Composer 2.2, whose github-oauth validation rejects
+          # the runner's GITHUB_TOKEN format ("contains invalid characters").
+          # setup-php persists that token in auth.json, so strip the persisted
+          # github-oauth from every composer home (default + wp-cli's own).
+          # Installing anonymously instead is flaky: shared runner IPs exhaust
+          # GitHub's unauthenticated API limit ("Could not authenticate against
+          # github.com"). So hand the same token back as http-basic, which
+          # Composer 2.2 accepts without the format check.
+          GITHUB_TOKEN: ""
+          COMPOSER_AUTH: '{"http-basic":{"github.com":{"username":"x-access-token","password":"${{ github.token }}"}}}'
+        run: |
+          composer config --global --unset github-oauth.github.com 2>/dev/null || true
+          rm -f "$HOME/.composer/auth.json" \
+                "$HOME/.config/composer/auth.json" \
+                "$HOME/.wp-cli/packages/auth.json" 2>/dev/null || true
+          wp package install wp-cli/dist-archive-command:v3.1.0
+
+      - name: Build plugin
+        run: |
+          composer run-script build
+          mkdir tmp-build
+          unzip -q "zipped/$PLUGIN_DIR-free.zip" -d tmp-build
+
+      - name: Run plugin check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: './tmp-build/${{ env.PLUGIN_DIR }}'
+
+  tests:
+    name: PHPUnit (wp-env)
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Extract PHP version
-      id: php_version
-      run: |
-        PHP_VERSION=$(grep -oP 'Requires PHP:\s*\K[\d.]+' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php || echo "7.4")
-        echo "version=$PHP_VERSION" >> $GITHUB_OUTPUT
+      - name: Get required PHP version
+        id: php_version
+        run: |
+          PHP_VERSION=$(grep -m1 "Requires PHP:" "$PLUGIN_FILE" | sed -E 's/.*Requires PHP:[[:space:]]*//' | tr -d ' \r')
+          echo "PHP_VERSION=${PHP_VERSION:-7.4}" >> $GITHUB_OUTPUT
 
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: ${{ steps.php_version.outputs.version }}
-        tools: composer:v2, wp-cli
-        coverage: none
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ steps.php_version.outputs.PHP_VERSION }}
+          coverage: none
+          tools: composer
 
-    - name: Validate composer.json
-      run: composer validate --no-check-all --no-check-publish
+      - name: Install composer dependencies
+        run: composer install --prefer-dist --no-progress
 
-    - name: Install dependencies
-      run: composer install --prefer-dist --no-progress
+      - name: Install plugin dependencies
+        run: |
+          if [ -f "$PLUGIN_DIR/composer.json" ]; then
+            composer install -d "$PLUGIN_DIR" --no-dev --prefer-dist --no-progress
+          fi
 
-    - name: Run PHPCS WordPress Coding Standards
-      run: composer run-script lint
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
 
-    - name: Run Security Checks
-      run: |
-        if composer show --installed | grep -q "phpcs-variable-analysis"; then
-          composer run-script phpcs-security
-        else
-          echo "Security checks not configured, skipping..."
-        fi
+      - name: Install npm dependencies
+        run: npm ci
 
-    - name: Check PHP Compatibility
-      run: |
-        if composer show --installed | grep -q "phpcompatibility"; then
-          composer run-script phpcompat
-        else
-          ./vendor/bin/phpcs --standard=PHPCompatibilityWP --runtime-set testVersion 7.4- --extensions=php broadcaster-auto-responder-for-gravity-forms/
-        fi
+      - name: Start wp-env
+        run: npx wp-env start
 
-    - name: Check version consistency
-      run: |
-        PLUGIN_VERSION=$(sed -n 's/ \* Version:\s*\(.*\)/\1/p' broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php | xargs)
-        CONSTANT_VERSION=$(sed -n "s/.*BROADCASTERGF_VERSION.*'\(.*\)'.*/\1/p" broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php | xargs)
-
-        echo "Plugin header version: $PLUGIN_VERSION"
-        echo "Version constant: $CONSTANT_VERSION"
-
-        if [ "$PLUGIN_VERSION" != "$CONSTANT_VERSION" ]; then
-          echo "Version mismatch detected!"
-          exit 1
-        fi
-
-    - name: Install WP-CLI dist-archive command
-      env:
-        # WP-CLI's bundled Composer rejects the runner's ghs_ token when
-        # GitHub's longer stateless-token format is in play (its oauth-token
-        # validation fails on the format), which makes this step flake. The
-        # token is persisted in a config FILE by setup-php, so clearing env
-        # vars alone is not enough — strip the persisted github-oauth from
-        # every composer home (default + wp-cli's own) and clone the public
-        # command anonymously with empty Composer auth.
-        GITHUB_TOKEN: ""
-        COMPOSER_AUTH: "{}"
-      run: |
-        composer config --global --unset github-oauth.github.com 2>/dev/null || true
-        rm -f "$HOME/.composer/auth.json" \
-              "$HOME/.config/composer/auth.json" \
-              "$HOME/.wp-cli/packages/auth.json" 2>/dev/null || true
-        wp package install wp-cli/dist-archive-command:v3.1.0
-
-    - name: Build plugin
-      run: |
-        composer run-script build
-        mkdir tmp-build
-        unzip dist/broadcaster-auto-responder-for-gravity-forms.zip -d tmp-build
-
-    # NOTE: wordpress/plugin-check-action@v1 installs the *latest* @wordpress/env
-    # at runtime (`npm -g i @wordpress/env`, no version pin). 11.7.0 (2026-05-27)
-    # intermittently leaves the container "Environment not initialized" in CI, so
-    # we run Plugin Check by hand against the pinned, last-known-good 11.6.0.
-    - name: WordPress Plugin Check (pinned @wordpress/env)
-      run: |
-        set -euo pipefail
-        PLUGIN_SLUG="broadcaster-auto-responder-for-gravity-forms"
-        PLUGIN_DIR="$(realpath "tmp-build/${PLUGIN_SLUG}")"
-
-        npm -g --no-fund i @wordpress/env@11.6.0
-
-        cat > .wp-env.json <<EOF
-        { "core": null, "port": 8880, "testsPort": 8881, "plugins": [ "https://downloads.wordpress.org/plugin/plugin-check.zip" ], "mappings": { "wp-content/plugins/${PLUGIN_SLUG}": "${PLUGIN_DIR}" } }
-        EOF
-
-        # wp-env start can flake; retry, resetting between attempts.
-        started=0
-        for i in 1 2 3; do
-          if wp-env start --update; then started=1; break; fi
-          echo "wp-env start attempt $i failed; retrying..."
-          wp-env stop >/dev/null 2>&1 || true
-          sleep 5
-        done
-        [ "$started" = "1" ] || { echo "::error::wp-env failed to start"; exit 1; }
-
-        # Confirm the environment is actually usable before checking.
-        wp-env run cli wp cli info
-        wp-env run cli wp plugin activate "$PLUGIN_SLUG"
-
-        # Keep stdout as clean JSON; send wp-env's own chatter to a separate file.
-        wp-env run cli wp plugin check "$PLUGIN_SLUG" \
-          --format=json \
-          --exclude-files=.wp-env.json \
-          --require=./wp-content/plugins/plugin-check/cli.php \
-          > pc-results.json 2> pc-stderr.txt || true
-        echo "--- Plugin Check stderr ---"; cat pc-stderr.txt || true
-        echo "--- Plugin Check results ---"; cat pc-results.json || true
-
-        # With zero findings, plugin-check prints a plain-text
-        # "Checks complete. No errors found." line (not JSON) on stdout.
-        if grep -q "No errors found" pc-results.json; then
-          echo "Plugin Check: clean."
-          exit 0
-        fi
-
-        # Otherwise the output must be JSON findings. Fail closed if it is not
-        # parseable JSON (e.g. a broken environment) so a bad run can't show green.
-        if ! jq empty pc-results.json 2>/dev/null; then
-          echo "::error::Plugin Check produced no parseable results (see log above)"
-          exit 1
-        fi
-
-        COUNT="$(jq '[.. | objects | select((.type? == "ERROR") or (.type? == "WARNING"))] | length' pc-results.json)"
-        echo "Plugin Check error/warning count: ${COUNT}"
-        if [ "${COUNT}" -gt 0 ]; then
-          echo "::error::Plugin Check reported ${COUNT} issue(s)"
-          exit 1
-        fi
-        echo "Plugin Check: clean."
+      - name: Run tests
+        run: npm test
