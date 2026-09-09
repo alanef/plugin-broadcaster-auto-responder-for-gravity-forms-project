@@ -13,7 +13,7 @@ hand-edit the managed files listed there.
 |---|---|
 | Plugin directory | `broadcaster-auto-responder-for-gravity-forms/` |
 | Main file | `broadcaster-auto-responder-for-gravity-forms/broadcaster-auto-responder-for-gravity-forms.php` |
-| Default branch | `main` |
+| Default branch | `master` |
 | WordPress.org slug | `broadcaster-auto-responder-for-gravity-forms` |
 | wp-env ports | dev `8770`, tests `8771` |
 | Version locations | plugin header `Version:`, `readme.txt` `Stable tag:` and `BROADCASTERGF_VERSION` in the main file |

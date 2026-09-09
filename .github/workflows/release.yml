@@ -97,7 +97,7 @@ jobs:
             Release of Broadcaster Auto Responder for Gravity Forms v${{ steps.get_version.outputs.VERSION }}
 
             ## Changes
-            See the [change log](https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project/blob/main/CHANGELOG.md) for details.
+            See the [change log](https://github.com/alanef/plugin-broadcaster-auto-responder-for-gravity-forms-project/blob/master/CHANGELOG.md) for details.
 
             ## Installation
             Download the attached zip file and upload to your WordPress site.
