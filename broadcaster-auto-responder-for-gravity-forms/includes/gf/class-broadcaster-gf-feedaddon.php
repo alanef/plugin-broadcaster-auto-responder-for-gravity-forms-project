@@ -8,7 +8,7 @@
  * loaded by the time this class definition is parsed.
  *
  * BRO-881 ships only the configuration UI: settings schema, list columns, and
- * placeholder/recipient validation. Submission dispatch (process_feed) is a
+ * recipient and reply-template validation. Submission dispatch (process_feed) is a
  * deliberate no-op here and is filled in by BRO-882, which will use
  * BroadcasterGF\Api\Client to post to /api/v1/messages/incoming.
  *
@@ -455,8 +455,9 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 				),
 			),
 			array(
-				'title'       => esc_html__( 'Auto-response template — in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'description' => esc_html__( 'If only this template is filled, Broadcaster uses it at all times. If both in-hours and out-of-hours are filled, Broadcaster picks based on company business hours. If both are blank, no auto-response is sent.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'title'       => esc_html__( 'Auto-response template: in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
+				// BRO-1831: the reply can only carry the business's own words. Said where the template is chosen.
+				'description' => esc_html__( 'If only this template is filled, Broadcaster uses it at all times. If both in-hours and out-of-hours are filled, Broadcaster picks based on company business hours. If both are blank, no auto-response is sent. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
 						'label'   => esc_html__( 'In-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -465,18 +466,10 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'class'   => 'medium',
 						'tooltip' => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
-					array(
-						'label'               => esc_html__( 'In-hours template placeholders', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'                => 'textarea',
-						'name'                => 'in_hours_template_placeholders',
-						'class'               => 'medium merge-tag-support mt-position-right',
-						'tooltip'             => esc_html__( 'Comma-separated key:value pairs, e.g. text_1:{Message:5},client_first_name:{Name (First):1.3}', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'validation_callback' => array( $this, 'validate_in_hours_placeholders' ),
-					),
 				),
 			),
 			array(
-				'title'       => esc_html__( 'Auto-response template — out of business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'title'       => esc_html__( 'Auto-response template: out of business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'description' => esc_html__( 'Optional. Only used when an in-hours template is also set.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
@@ -484,14 +477,6 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'type'  => 'text',
 						'name'  => 'out_of_hours_template_name',
 						'class' => 'medium',
-					),
-					array(
-						'label'               => esc_html__( 'Out-of-hours template placeholders', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'                => 'textarea',
-						'name'                => 'out_of_hours_template_placeholders',
-						'class'               => 'medium merge-tag-support mt-position-right',
-						'tooltip'             => esc_html__( 'Same format as the in-hours placeholders.', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'validation_callback' => array( $this, 'validate_out_of_hours_placeholders' ),
 					),
 				),
 			),
@@ -585,26 +570,15 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$in_hours_template     = trim( (string) rgar( $meta, 'in_hours_template_name' ) );
 		$out_of_hours_template = trim( (string) rgar( $meta, 'out_of_hours_template_name' ) );
 
+		// BRO-1831: template names only. Broadcaster fills a reply to a form with the business's own values and
+		// ignores any sent with it, because a form's answers are whatever a stranger typed. A feed saved by an
+		// earlier version may still hold placeholder settings; they are not sent.
 		if ( '' !== $in_hours_template ) {
-			$payload['in_hours_template_name']         = $in_hours_template;
-			$payload['in_hours_template_placeholders'] = $this->build_template_placeholders(
-				rgar( $meta, 'in_hours_template_placeholders', '' ),
-				$form,
-				$entry,
-				$feed_id,
-				'in_hours'
-			);
+			$payload['in_hours_template_name'] = $in_hours_template;
 		}
 
 		if ( '' !== $out_of_hours_template ) {
-			$payload['out_of_hours_template_name']         = $out_of_hours_template;
-			$payload['out_of_hours_template_placeholders'] = $this->build_template_placeholders(
-				rgar( $meta, 'out_of_hours_template_placeholders', '' ),
-				$form,
-				$entry,
-				$feed_id,
-				'out_of_hours'
-			);
+			$payload['out_of_hours_template_name'] = $out_of_hours_template;
 		}
 
 		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
@@ -857,34 +831,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
-	 * Parse a placeholder textarea string and render merge tags inside each
-	 * value. Parse errors fall back to an empty map so dispatch doesn't fail
-	 * mid-flight — the same string was already validated when the feed was
-	 * saved (parse_placeholders).
-	 *
-	 * @param string $raw     Raw textarea content.
-	 * @param array  $form    The form.
-	 * @param array  $entry   The entry.
-	 * @param string $feed_id Feed id (for error logging).
-	 * @param string $slot    'in_hours' or 'out_of_hours' (for error logging).
-	 *
-	 * @return array<string,string>
-	 */
-	private function build_template_placeholders( $raw, $form, $entry, $feed_id, $slot ): array {
-		$parsed = self::parse_placeholders( (string) $raw );
-		if ( ! $parsed['ok'] ) {
-			$this->log_error( __METHOD__ . sprintf( '(): feed %s %s placeholders failed to parse at dispatch (was: %s)', $feed_id, $slot, $parsed['error'] ) );
-			return array();
-		}
-		$rendered = array();
-		foreach ( $parsed['value'] as $key => $value ) {
-			$rendered[ $key ] = $this->render_merge_tags( $value, $form, $entry );
-		}
-		return $rendered;
-	}
-
-	/**
-	 * Whole-feed validation: enforce that at least one recipient field is mapped.
+	 * Whole-feed validation: a recipient field is mapped, and each template can be a reply to a form.
 	 *
 	 * @param array $settings Submitted feed settings.
 	 * @return bool
@@ -902,103 +849,28 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			$valid = false;
 		}
 
+		// BRO-1831: refuse, at save, a template Broadcaster would never send in reply to a form, with its reason.
+		// When Broadcaster cannot be asked, the feed saves: a feed should not depend on the network being up at
+		// save time, and Broadcaster still refuses to send such a reply (and says why on the conversation).
+		$api_key = trim( (string) $this->get_plugin_setting( 'api_key' ) );
+		if ( '' !== $api_key ) {
+			$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
+			foreach ( array( 'in_hours_template_name', 'out_of_hours_template_name' ) as $slot ) {
+				$name = isset( $settings[ $slot ] ) ? trim( (string) $settings[ $slot ] ) : '';
+				if ( '' === $name ) {
+					continue;
+				}
+				$check = $client->check_reply_template( $name );
+				if ( false === $check['usable'] ) {
+					$this->set_field_error(
+						array( 'name' => $slot ),
+						null !== $check['reason'] ? esc_html( $check['reason'] ) : esc_html__( 'Broadcaster cannot send this template as a reply to a form.', 'broadcaster-auto-responder-for-gravity-forms' )
+					);
+					$valid = false;
+				}
+			}
+		}
+
 		return $valid;
-	}
-
-	/**
-	 * Per-field validator for in-hours placeholder text.
-	 *
-	 * @param array  $field Field config.
-	 * @param string $value Submitted value.
-	 */
-	public function validate_in_hours_placeholders( $field, $value ) {
-		$this->validate_placeholder_field( $field, (string) $value );
-	}
-
-	/**
-	 * Per-field validator for out-of-hours placeholder text.
-	 *
-	 * @param array  $field Field config.
-	 * @param string $value Submitted value.
-	 */
-	public function validate_out_of_hours_placeholders( $field, $value ) {
-		$this->validate_placeholder_field( $field, (string) $value );
-	}
-
-	/**
-	 * Shared placeholder-text validator: parse and surface any error against the field.
-	 *
-	 * @param array  $field Field config.
-	 * @param string $value Submitted value.
-	 */
-	private function validate_placeholder_field( $field, $value ) {
-		$result = self::parse_placeholders( (string) $value );
-		if ( ! $result['ok'] ) {
-			$this->set_field_error( $field, $result['error'] );
-		}
-	}
-
-	/**
-	 * Parse a "key1:value1,key2:value2" string into an associative array.
-	 *
-	 * Static + public so the BRO-882 dispatch path can reuse the same parser
-	 * when building the API payload — same rules at save and at send.
-	 *
-	 * @param string $raw Raw textarea content.
-	 * @return array{ok:bool,value:array<string,string>,error:string|null}
-	 */
-	public static function parse_placeholders( $raw ) {
-		$raw = trim( (string) $raw );
-		if ( '' === $raw ) {
-			return array(
-				'ok'    => true,
-				'value' => array(),
-				'error' => null,
-			);
-		}
-
-		$out   = array();
-		$pairs = explode( ',', $raw );
-		foreach ( $pairs as $pair ) {
-			if ( false === strpos( $pair, ':' ) ) {
-				return array(
-					'ok'    => false,
-					'value' => array(),
-					'error' => sprintf(
-						/* translators: %s: the malformed pair text */
-						esc_html__( 'Malformed placeholder pair (no colon): %s', 'broadcaster-auto-responder-for-gravity-forms' ),
-						trim( $pair )
-					),
-				);
-			}
-			list( $key, $value ) = explode( ':', $pair, 2 );
-			$key                 = trim( $key );
-			$value               = trim( $value );
-			if ( '' === $key ) {
-				return array(
-					'ok'    => false,
-					'value' => array(),
-					'error' => esc_html__( 'Empty placeholder key.', 'broadcaster-auto-responder-for-gravity-forms' ),
-				);
-			}
-			if ( array_key_exists( $key, $out ) ) {
-				return array(
-					'ok'    => false,
-					'value' => array(),
-					'error' => sprintf(
-						/* translators: %s: the duplicated placeholder key */
-						esc_html__( 'Duplicate placeholder key: %s', 'broadcaster-auto-responder-for-gravity-forms' ),
-						$key
-					),
-				);
-			}
-			$out[ $key ] = $value;
-		}
-
-		return array(
-			'ok'    => true,
-			'value' => $out,
-			'error' => null,
-		);
 	}
 }

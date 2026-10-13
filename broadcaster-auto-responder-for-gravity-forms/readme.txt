@@ -24,7 +24,7 @@ If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, thi
 * Each submission can trigger one optional template auto-response: either a single template that always fires, or two templates (in-hours / out-of-hours), and Broadcaster picks based on your company's configured business hours.
 * A dedicated **WhatsApp Recipient** custom field (under *Advanced Fields* in the form editor) captures the contact's phone number in a single input, validates the format inline before form submission, and prevents the submitter from accidentally collecting a typo'd number that Broadcaster would later silently fail to deliver to. Or use any standard Gravity Forms field as the recipient mapping for backward compatibility.
 * Phone or WhatsApp username (or both) are mapped from form fields you nominate.
-* Standard Gravity Forms merge tags work in the message body and in template placeholder values.
+* Standard Gravity Forms merge tags work in the message body.
 * Standard Gravity Forms conditional logic decides whether a feed runs for a given submission.
 * Failures never block the form: a Broadcaster outage doesn't stop the user's submission, the email notification, or the confirmation page. When Broadcaster declines a recipient as undeliverable, the failure is surfaced inline on the Gravity Forms entry detail so site administrators can see what didn't deliver and why.
 
@@ -46,7 +46,7 @@ This plugin is a connector to **Broadcaster** ([getbroadcaster.com](https://getb
 
 * The contact's phone number and/or WhatsApp username (as mapped in the feed).
 * The submitter's name, when a name field is mapped.
-* The message text and any form-field values you include in the message body or template placeholders.
+* The message text and any form-field values you include in the message body.
 * A form identifier and source label used to attribute the message inside Broadcaster.
 
 Data is sent **only** for forms you have explicitly connected to Broadcaster, and **only** when a Broadcaster API key is configured. No data is sent before then, and the plugin contacts no other external service. Nothing is collected for the plugin's own purposes: no telemetry, analytics, or tracking.
@@ -84,9 +84,8 @@ The Broadcaster site URL is hardcoded to `https://getbroadcaster.com` on product
 5. Optionally map a **Submitter name field**.
 6. Write the **Message text** the contact's submission becomes inside Broadcaster. Gravity Forms merge tags work, for example `{Message:5}` or `{Name (First):1.3}`.
 7. Optionally fill the **In-hours template name** (the *internal* name of an approved Broadcaster template). If only this field is set, Broadcaster uses it at all times. If both this and the out-of-hours template name are set, Broadcaster picks by company business hours. If neither is set, no auto-response is sent.
-8. Optionally fill the **In-hours template placeholders** as comma-separated `key:value` pairs. Values may include merge tags. Example:
-   `text_1:{Message:5},client_first_name:{Name (First):1.3}`
-9. Repeat for **Out-of-hours template name** and **Out-of-hours template placeholders** if you want a different reply outside business hours.
+8. Optionally fill the **Out-of-hours template name** if you want a different reply outside business hours.
+9. Choose templates that use only your business details and opening hours. A reply never includes anything someone typed into the form, such as their name or message, because a form will take any phone number. The plugin checks each template with Broadcaster when you save, and refuses one that needs anything else, saying why.
 10. (Optional) Use Gravity Forms' standard **Conditional logic** to run the feed only when chosen form fields match.
 11. Save the feed. Submit the form to test; the message should appear in Broadcaster within seconds, and the auto-response (if configured) should send shortly after.
 
@@ -218,7 +217,7 @@ Open *Forms → Settings → Logging* and enable the **Broadcaster Auto Responde
 * Conditional logic on the feed didn't match the submission.
 * Neither phone nor WhatsApp username was mapped, or the mapped field was empty.
 * Template name in feed config doesn't match an approved Broadcaster template.
-* Required template variable missing from placeholder map.
+* The template asks for something other than your business details or opening hours, such as the contact's name. Broadcaster does not send it, and its conversation says why.
 * Phone/username normalization mismatch: contact gets created on the Broadcaster side but template send fails because the recipient can't be resolved.
 
 = "Broadcaster rejected the message (HTTP 422). The form id field must be a string." =

@@ -86,7 +86,7 @@ class Plugin {
 			. '<ul>'
 			. '<li>' . esc_html__( 'The contact\'s phone number and/or WhatsApp username, as mapped in the form\'s Broadcaster feed.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '<li>' . esc_html__( 'The submitter\'s name, when a name field is mapped.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
-			. '<li>' . esc_html__( 'The message text and any form-field values included in the mapped message body or template placeholders.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
+			. '<li>' . esc_html__( 'The message text and any form-field values included in the mapped message body.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '<li>' . esc_html__( 'A form identifier and source label used to attribute the message inside Broadcaster.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '</ul>'
 			. '<p>'

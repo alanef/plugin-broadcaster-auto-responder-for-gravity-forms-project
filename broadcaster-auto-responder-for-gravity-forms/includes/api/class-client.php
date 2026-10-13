@@ -117,6 +117,58 @@ class Client {
 	}
 
 	/**
+	 * Ask Broadcaster whether an approved template can be the automatic reply to a form (BRO-1831).
+	 *
+	 * Broadcaster sends a reply to a form with only the business's own details, its opening hours and the
+	 * template's own words: nothing a person typed into the form, because a form takes any phone number. This
+	 * asks GET /api/v1/reply-templates/{name}, which answers from the same rule the send uses, so a feed can be
+	 * refused when it is saved instead of its replies never being sent.
+	 *
+	 * `usable` is null when Broadcaster could not be asked (no answer, or an older Broadcaster without the
+	 * endpoint): the caller decides what an unanswered question means.
+	 *
+	 * @param string $name The template's internal name.
+	 *
+	 * @return array{usable:bool|null,reason:string|null}
+	 */
+	public function check_reply_template( string $name ): array {
+		$response = wp_remote_get(
+			$this->base_url . '/api/v1/reply-templates/' . rawurlencode( $name ),
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $this->api_key,
+					'Accept'        => 'application/json',
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'usable' => null,
+				'reason' => null,
+			);
+		}
+
+		$code    = (int) wp_remote_retrieve_response_code( $response );
+		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+
+		// 200 answers yes or no; 404 means no approved template has that name. Anything else (an older
+		// Broadcaster, a key without message intake, an outage) is not an answer.
+		if ( ( 200 === $code || 404 === $code ) && is_array( $decoded ) && array_key_exists( 'usable', $decoded ) ) {
+			return array(
+				'usable' => (bool) $decoded['usable'],
+				'reason' => isset( $decoded['reason'] ) && is_string( $decoded['reason'] ) ? $decoded['reason'] : null,
+			);
+		}
+
+		return array(
+			'usable' => null,
+			'reason' => null,
+		);
+	}
+
+	/**
 	 * Send an incoming-message payload to /api/v1/messages/incoming.
 	 *
 	 * The plugin assumes Broadcaster has already validated this payload
