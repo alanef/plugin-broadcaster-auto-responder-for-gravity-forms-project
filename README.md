@@ -140,7 +140,7 @@ npm test                               # PHPUnit in the wp-env tests container
 composer run build                     # zipped/broadcaster-auto-responder-for-gravity-forms-free.zip
 ```
 
-Releases: set the version in the plugin header and `readme.txt`, update `CHANGELOG.md`,
-tag `vX.Y.Z` and push. CI builds the zip, creates the GitHub release and deploys to
-WordPress.org.
+Changes go in `broadcaster-auto-responder-for-gravity-forms/changelog.txt` under `= Unreleased =`. Releases run through
+`/tk-release X.Y.Z` then `/tk-deploy live` (see CLAUDE.md): the tag makes CI build the zip,
+create the GitHub release and deploy wherever the readme `Type:` says.
 <!-- tooling:end -->
