@@ -87,19 +87,19 @@ class Notices {
 	}
 
 	/**
-	 * True when an API key is saved in the GF add-on settings.
+	 * True when there is an API key: in wp-config.php (BRO-1468) or saved in the GF add-on settings.
 	 *
 	 * The API URL is locked to the live SaaS in production and defaults
 	 * to it on dev/staging/local, so its presence is no longer part of
 	 * the "configured" check — only the key matters.
+	 *
+	 * BRO-1468: through Api_Key::resolve() like every other read. This read the raw option, so a site with the key
+	 * in wp-config.php would have shown "not configured" for ever.
 	 */
 	private function api_configured(): bool {
 		$opt = get_option( Plugin::SETTINGS_OPTION_KEY, array() );
-		if ( ! is_array( $opt ) ) {
-			return false;
-		}
-		$api_key = isset( $opt['api_key'] ) ? trim( (string) $opt['api_key'] ) : '';
-		return '' !== $api_key;
+		$saved = is_array( $opt ) && isset( $opt['api_key'] ) ? $opt['api_key'] : '';
+		return '' !== \BroadcasterGF\Api\Api_Key::resolve( $saved );
 	}
 
 	/**

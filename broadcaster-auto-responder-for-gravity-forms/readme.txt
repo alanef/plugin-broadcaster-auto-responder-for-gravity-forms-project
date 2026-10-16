@@ -71,6 +71,14 @@ This plugin ships its complete, unminified PHP, JavaScript and CSS source inside
 3. Paste your Broadcaster API key (generate one in Broadcaster under *Settings → API Keys*) and click **Save Settings**.
 4. After save, the page shows **✓ Connected** if Broadcaster accepts the key, or **✗ Not connected** with a reason if it does not.
 
+= Keep the API key out of the database (optional) =
+
+Instead of saving the key on the settings page, you can put it in `wp-config.php`, above the line `/* That's all, stop editing! */`:
+
+`define( 'BROADCASTER_API_KEY', 'your-api-key' );`
+
+The plugin then uses that key, and the settings page says it is set in `wp-config.php` instead of showing it. A key in `wp-config.php` is not in your database backups, staging copies or migration exports. It takes priority over any key saved on the settings page; remove the line and the saved key, if there is one, is used again.
+
 The Broadcaster site URL is hardcoded to `https://getbroadcaster.com` on production sites. On dev/staging/local environments (sites where `WP_ENVIRONMENT_TYPE` is not `production`) the URL field is editable so you can point at a non-prod Broadcaster instance.
 
 = Configure a form =

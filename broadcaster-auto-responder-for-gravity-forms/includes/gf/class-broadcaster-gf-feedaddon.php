@@ -171,6 +171,14 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * BRO-1468: the API key to use, from wp-config.php's BROADCASTER_API_KEY when it is defined, otherwise the
+	 * saved setting. Every read of the key goes through here or Api_Key::resolve(); see that class.
+	 */
+	public function get_api_key(): string {
+		return \BroadcasterGF\Api\Api_Key::resolve( $this->get_plugin_setting( 'api_key' ) );
+	}
+
+	/**
 	 * True when WP_ENVIRONMENT_TYPE resolves to 'production'.
 	 *
 	 * Treats sites with no environment defined as production (matches
@@ -199,6 +207,22 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			'tooltip'           => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
 			'feedback_callback' => array( $this, 'check_api_credentials' ),
 		);
+
+		// BRO-1468: with the key in wp-config.php there is nothing to type here, and the key is never sent to the
+		// browser. The field says where the key comes from; the connection status below still tests it.
+		if ( \BroadcasterGF\Api\Api_Key::is_from_constant() ) {
+			$api_key_field = array(
+				'name'  => 'api_key_source',
+				'label' => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'type'  => 'html',
+				'html'  => '<p>' . sprintf(
+					/* translators: %1$s: the constant's name, %2$s: wp-config.php */
+					esc_html__( 'Set by %1$s in %2$s. To change it, edit %2$s.', 'broadcaster-auto-responder-for-gravity-forms' ),
+					'<code>' . esc_html( \BroadcasterGF\Api\Api_Key::CONSTANT ) . '</code>',
+					'<code>wp-config.php</code>'
+				) . '</p>',
+			);
+		}
 
 		$status_field = array(
 			'name' => 'connection_status',
@@ -302,7 +326,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 */
 	private function run_connection_test( $value = null ): ?array {
 		$api_key = null === $value
-			? trim( (string) $this->get_plugin_setting( 'api_key' ) )
+			? $this->get_api_key()
 			: trim( (string) $value );
 
 		if ( '' === $api_key ) {
@@ -341,6 +365,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 */
 	public function update_plugin_settings( $settings ) {
 		$this->reset_connection_test_cache();
+		// BRO-1468: with the key in wp-config.php, nothing new is saved and the earlier saved key, if any, is kept.
+		$settings = \BroadcasterGF\Api\Api_Key::settings_to_save( (array) $settings, $this->get_plugin_setting( 'api_key' ) );
 		return parent::update_plugin_settings( $settings );
 	}
 
@@ -519,7 +545,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		$entry_id = rgar( $entry, 'id' );
 		$feed_id  = rgar( $feed, 'id' );
 
-		$api_key = trim( (string) $this->get_plugin_setting( 'api_key' ) );
+		$api_key = $this->get_api_key();
 		if ( '' === $api_key ) {
 			$this->log_error( __METHOD__ . sprintf( '(): feed %s skipped — Broadcaster API key not configured.', $feed_id ) );
 			return $entry;
@@ -852,7 +878,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		// BRO-1831: refuse, at save, a template Broadcaster would never send in reply to a form, with its reason.
 		// When Broadcaster cannot be asked, the feed saves: a feed should not depend on the network being up at
 		// save time, and Broadcaster still refuses to send such a reply (and says why on the conversation).
-		$api_key = trim( (string) $this->get_plugin_setting( 'api_key' ) );
+		$api_key = $this->get_api_key();
 		if ( '' !== $api_key ) {
 			$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
 			foreach ( array( 'in_hours_template_name', 'out_of_hours_template_name' ) as $slot ) {

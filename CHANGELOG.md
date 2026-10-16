@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The API key can live in wp-config.php.** Add `define( 'BROADCASTER_API_KEY', 'your-api-key' );` and the
+  plugin uses it, ahead of any key saved on the settings page. The settings page then says the key is set in
+  wp-config.php and never shows it, and saving the page writes no key to the database, so the key is not in
+  backups, staging copies or migration exports. The connection status and the "not configured" notice work the
+  same either way. Remove the line and a key saved earlier is used again (BRO-1468).
+
 ### Removed
 
 - **Template placeholders.** The in-hours and out-of-hours "template placeholders" settings are gone, and a
