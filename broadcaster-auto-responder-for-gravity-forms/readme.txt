@@ -68,7 +68,7 @@ This plugin ships its complete, unminified PHP, JavaScript and CSS source inside
 
 1. Upload the plugin to `/wp-content/plugins/broadcaster-auto-responder-for-gravity-forms` (or install the zip via *Plugins → Add New → Upload Plugin*) and activate it.
 2. In WordPress admin, go to **Forms → Settings → Broadcaster**.
-3. Paste your Broadcaster API key (generate one in Broadcaster under *Settings → API Keys*) and click **Save Settings**.
+3. Paste your Broadcaster API key (generate one in Broadcaster under *Settings → API Keys*) and click **Save Settings**. The key is not shown again: the page says "Saved key ending" and its last four characters. To change it, paste a new one; leaving the field blank keeps the saved key.
 4. After save, the page shows **✓ Connected** if Broadcaster accepts the key, or **✗ Not connected** with a reason if it does not.
 
 = Keep the API key out of the database (optional) =

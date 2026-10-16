@@ -63,21 +63,50 @@ class Api_Key {
 	}
 
 	/**
+	 * The settings field the key is typed into. Never a stored setting, so Gravity Forms always renders it empty:
+	 * the saved key is never sent back to the browser (BRO-1468).
+	 */
+	const FIELD = 'api_key_new';
+
+	/**
+	 * What the settings page says about the saved key: its last four characters only, or nothing when none is saved.
+	 * A key too short to hide most of it says only that one is saved.
+	 *
+	 * @param mixed $saved The saved setting, as stored.
+	 */
+	public static function saved_hint( $saved ): string {
+		$saved = is_string( $saved ) ? trim( $saved ) : '';
+		if ( '' === $saved ) {
+			return '';
+		}
+		if ( strlen( $saved ) < 12 ) {
+			return __( 'A key is saved.', 'broadcaster-auto-responder-for-gravity-forms' );
+		}
+
+		/* translators: %s: the last four characters of the saved API key */
+		return sprintf( __( 'Saved key ending %s.', 'broadcaster-auto-responder-for-gravity-forms' ), substr( $saved, -4 ) );
+	}
+
+	/**
 	 * The settings to write when the settings screen is saved.
 	 *
-	 * While wp-config.php supplies the key, the screen has no key field, so the posted settings carry none, and
-	 * Gravity Forms replaces the whole stored array. Whatever key was saved before is put back unchanged: nothing
-	 * new is written, and removing the constant later falls back to it, or to unconfigured if there was none.
+	 * The key is typed into FIELD, which starts empty. Something typed there replaces the saved key; a blank submit
+	 * keeps it. Gravity Forms replaces the whole stored array on save, so the earlier key is always put back
+	 * explicitly. An `api_key` arriving in the post is never written: it can only be forged.
+	 *
+	 * While wp-config.php supplies the key the screen has no key field at all, nothing new is written, and the
+	 * earlier key is kept, so removing the constant later falls back to it, or to unconfigured if there was none.
 	 *
 	 * @param array $settings      Settings about to be written.
 	 * @param mixed $previous_key  The key saved before this save, as stored.
 	 */
 	public static function settings_to_save( array $settings, $previous_key ): array {
-		if ( ! self::is_from_constant() ) {
-			return $settings;
-		}
-		unset( $settings['api_key'] );
-		if ( is_string( $previous_key ) && '' !== $previous_key ) {
+		$typed = isset( $settings[ self::FIELD ] ) && is_string( $settings[ self::FIELD ] ) ? trim( $settings[ self::FIELD ] ) : '';
+		unset( $settings['api_key'], $settings[ self::FIELD ] );
+
+		if ( '' !== $typed && ! self::is_from_constant() ) {
+			$settings['api_key'] = $typed;
+		} elseif ( is_string( $previous_key ) && '' !== $previous_key ) {
 			$settings['api_key'] = $previous_key;
 		}
 

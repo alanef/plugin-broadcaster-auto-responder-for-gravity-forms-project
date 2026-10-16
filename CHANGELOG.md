@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wp-config.php and never shows it, and saving the page writes no key to the database, so the key is not in
   backups, staging copies or migration exports. The connection status and the "not configured" notice work the
   same either way. Remove the line and a key saved earlier is used again (BRO-1468).
+- **A saved API key is no longer shown on the settings page.** The page says "Saved key ending" and its last four
+  characters, above an empty field. Paste a new key to replace it; leaving the field blank keeps the saved key. The
+  key used to be printed into the page as the field's value, where anyone at the screen, or reading the page
+  source, could copy it (BRO-1468).
 
 ### Removed
 

@@ -31,10 +31,60 @@ final class ApiKeyTest extends TestCase {
 		$this->assertSame( '', Api_Key::resolve( array( 'not', 'a', 'key' ) ) );
 	}
 
-	public function test_without_the_constant_saving_writes_what_was_posted(): void {
-		$posted = array( 'api_key' => 'new-fixture-key', 'default_phone_country' => 'GB' );
+	// --- The saved key is never sent back to the browser: a write-only field. ---
 
-		$this->assertSame( $posted, Api_Key::settings_to_save( $posted, 'old-fixture-key' ) );
+	public function test_a_key_typed_into_the_field_replaces_the_saved_one(): void {
+		$posted = array( Api_Key::FIELD => '  new-fixture-key ', 'default_phone_country' => 'GB' );
+
+		$this->assertSame(
+			array( 'default_phone_country' => 'GB', 'api_key' => 'new-fixture-key' ),
+			Api_Key::settings_to_save( $posted, 'old-fixture-key' )
+		);
+	}
+
+	public function test_a_blank_field_keeps_the_saved_key(): void {
+		foreach ( array( '', '   ', null ) as $blank ) {
+			$this->assertSame(
+				array( 'default_phone_country' => 'GB', 'api_key' => 'old-fixture-key' ),
+				Api_Key::settings_to_save( array( Api_Key::FIELD => $blank, 'default_phone_country' => 'GB' ), 'old-fixture-key' )
+			);
+		}
+		// And when the field is not posted at all.
+		$this->assertSame(
+			array( 'default_phone_country' => 'GB', 'api_key' => 'old-fixture-key' ),
+			Api_Key::settings_to_save( array( 'default_phone_country' => 'GB' ), 'old-fixture-key' )
+		);
+	}
+
+	public function test_a_blank_field_with_nothing_saved_saves_no_key(): void {
+		$this->assertSame(
+			array( 'default_phone_country' => 'GB' ),
+			Api_Key::settings_to_save( array( Api_Key::FIELD => '', 'default_phone_country' => 'GB' ), '' )
+		);
+	}
+
+	public function test_an_api_key_in_the_post_is_never_written(): void {
+		// The page has no field by that name, so only a forged post carries one.
+		$this->assertSame(
+			array( 'api_key' => 'old-fixture-key' ),
+			Api_Key::settings_to_save( array( 'api_key' => 'forged-fixture-key' ), 'old-fixture-key' )
+		);
+	}
+
+	public function test_the_write_only_field_is_never_a_stored_setting(): void {
+		$saved = Api_Key::settings_to_save( array( Api_Key::FIELD => 'new-fixture-key' ), '' );
+
+		$this->assertArrayNotHasKey( Api_Key::FIELD, $saved );
+		$this->assertNotSame( 'api_key', Api_Key::FIELD );
+	}
+
+	public function test_the_page_shows_only_the_last_four_characters_of_a_saved_key(): void {
+		$this->assertSame( 'Saved key ending 1a2b.', Api_Key::saved_hint( 'bk_live_fixture_00001a2b' ) );
+		$this->assertStringNotContainsString( 'fixture', Api_Key::saved_hint( 'bk_live_fixture_00001a2b' ) );
+		// A key too short to hide most of it gives none of it away.
+		$this->assertSame( 'A key is saved.', Api_Key::saved_hint( 'short1a2b' ) );
+		$this->assertSame( '', Api_Key::saved_hint( '' ) );
+		$this->assertSame( '', Api_Key::saved_hint( null ) );
 	}
 
 	// --- With the constant. ---
@@ -80,8 +130,8 @@ final class ApiKeyTest extends TestCase {
 	public function test_with_the_constant_saving_writes_no_new_key_and_keeps_the_earlier_one(): void {
 		define( 'BROADCASTER_API_KEY', 'config-fixture-key' );
 
-		// The screen has no key field, so the post carries none; a forged one is not written either.
-		$posted = array( 'api_key' => 'forged-fixture-key', 'default_phone_country' => 'GB' );
+		// The screen has no key field, so the post carries none; a forged one is not written either, nor a typed one.
+		$posted = array( 'api_key' => 'forged-fixture-key', Api_Key::FIELD => 'typed-fixture-key', 'default_phone_country' => 'GB' );
 
 		$this->assertSame(
 			array( 'default_phone_country' => 'GB', 'api_key' => 'old-fixture-key' ),
@@ -142,8 +192,10 @@ final class ApiKeyTest extends TestCase {
 			$sorted( array(
 				"includes/admin/class-notices.php: \$saved = is_array( \$opt ) && isset( \$opt['api_key'] ) ? \$opt['api_key'] : '';",
 				"includes/api/class-api-key.php: * fifth that reads the option or get_plugin_setting( 'api_key' ) directly reintroduces exactly that.",
-				"includes/api/class-api-key.php: unset( \$settings['api_key'] );",
+				"includes/api/class-api-key.php: unset( \$settings['api_key'], \$settings[ self::FIELD ] );",
+				"includes/api/class-api-key.php: \$settings['api_key'] = \$typed;",
 				"includes/api/class-api-key.php: \$settings['api_key'] = \$previous_key;",
+				"includes/gf/class-broadcaster-gf-feedaddon.php: \$saved_hint    = \\BroadcasterGF\\Api\\Api_Key::saved_hint( \$this->get_plugin_setting( 'api_key' ) );",
 				"includes/gf/class-broadcaster-gf-feedaddon.php: return \\BroadcasterGF\\Api\\Api_Key::resolve( \$this->get_plugin_setting( 'api_key' ) );",
 				"includes/gf/class-broadcaster-gf-feedaddon.php: \$settings = \\BroadcasterGF\\Api\\Api_Key::settings_to_save( (array) \$settings, \$this->get_plugin_setting( 'api_key' ) );",
 			) ),

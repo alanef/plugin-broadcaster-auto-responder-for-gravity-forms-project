@@ -135,9 +135,10 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	/**
 	 * Per-request cache for the connection test result.
 	 *
-	 * `feedback_callback` (the inline tick/cross) and the explicit status
-	 * line below the key both want the same answer; caching means a single
-	 * round-trip to Broadcaster per settings-page render.
+	 * The status line below the key asks once per render; caching means a
+	 * single round-trip to Broadcaster per settings-page render. (BRO-1468:
+	 * the inline tick/cross went with the key field's value, which is never
+	 * rendered now; the status line tests the saved key.)
 	 *
 	 * Keyed on `{api_url}|{api_key}` so that when the saved key changes
 	 * (e.g. after a Save Settings post-back) the next call re-tests.
@@ -195,17 +196,25 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 * Plugin-level settings shown under Forms → Settings → Broadcaster.
 	 *
 	 * Mirrors the EmailOctopus add-on layout: API URL (only on dev/staging/
-	 * local) + API key with a feedback_callback that renders a green tick /
-	 * red cross next to the field whenever the page loads.
+	 * local) + API key, with a status line under it saying whether
+	 * Broadcaster accepts the saved key whenever the page loads.
 	 */
 	public function plugin_settings_fields() {
+		// BRO-1468: the saved key is never sent back to the browser. The field is Api_Key::FIELD, which is never
+		// stored, so it always renders empty; above it the page says only the saved key's last four characters.
+		// Typing a key replaces the saved one, leaving it blank keeps it (Api_Key::settings_to_save).
+		$saved_hint    = \BroadcasterGF\Api\Api_Key::saved_hint( $this->get_plugin_setting( 'api_key' ) );
 		$api_key_field = array(
-			'name'              => 'api_key',
-			'label'             => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
-			'type'              => 'text',
-			'class'             => 'medium',
-			'tooltip'           => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
-			'feedback_callback' => array( $this, 'check_api_credentials' ),
+			'name'        => \BroadcasterGF\Api\Api_Key::FIELD,
+			'label'       => esc_html__( 'Broadcaster API key', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'type'        => 'text',
+			'input_type'  => 'password',
+			'class'       => 'medium',
+			'placeholder' => '' !== $saved_hint
+				? esc_attr__( 'Paste a new key to replace the saved one', 'broadcaster-auto-responder-for-gravity-forms' )
+				: esc_attr__( 'Paste your API key', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'description' => '' !== $saved_hint ? '<p><strong>' . esc_html( $saved_hint ) . '</strong></p>' : '',
+			'tooltip'     => esc_html__( 'Generated in Broadcaster under Settings → API Keys. Sent as Authorization: Bearer …', 'broadcaster-auto-responder-for-gravity-forms' ),
 		);
 
 		// BRO-1468: with the key in wp-config.php there is nothing to type here, and the key is never sent to the
@@ -295,39 +304,17 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
-	 * Live feedback callback for the API key field.
-	 *
-	 * Returns true when Broadcaster accepts the key, false when it rejects
-	 * it, and null when there's nothing usable to test yet (so GF shows
-	 * no feedback rather than a misleading red cross).
-	 *
-	 * @param string $value The api_key field value being rendered.
-	 *
-	 * @return bool|null
-	 */
-	public function check_api_credentials( $value ) {
-		$result = $this->run_connection_test( (string) $value );
-		if ( null === $result ) {
-			return null;
-		}
-		return (bool) $result['ok'];
-	}
-
-	/**
 	 * Run the connection test, caching the result keyed on the actual
 	 * api_url + api_key so a Save Settings post-back invalidates the
-	 * previous render's cache automatically.
-	 *
-	 * @param string|null $value The api_key being rendered. When null, falls
-	 *                           back to the saved value.
+	 * previous render's cache automatically. Tests the key in use (BRO-1468:
+	 * wp-config.php's or the saved one); the field's typed value is never
+	 * rendered, so there is no other to test.
 	 *
 	 * @return array{ok:bool,message:string,http_code:int|null}|null
 	 *               Null when there is no key to test.
 	 */
-	private function run_connection_test( $value = null ): ?array {
-		$api_key = null === $value
-			? $this->get_api_key()
-			: trim( (string) $value );
+	private function run_connection_test(): ?array {
+		$api_key = $this->get_api_key();
 
 		if ( '' === $api_key ) {
 			return null;
