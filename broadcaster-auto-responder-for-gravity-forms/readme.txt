@@ -15,14 +15,14 @@ Forward Gravity Forms submissions to Broadcaster (paid WhatsApp business platfor
 
 **This is a connector plugin for [Broadcaster](https://getbroadcaster.com), a paid SaaS platform for business WhatsApp management. It is not a free WhatsApp integration; it requires an active Broadcaster account.** If you do not have one, this plugin will not do anything useful on its own.
 
-If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, this plugin forwards each form submission into your Broadcaster inbox as an incoming contact message, and can optionally trigger an approved WhatsApp template reply (in business hours, out of business hours, or both: Broadcaster picks based on your company's business-hours settings).
+If you *are* a Broadcaster customer using Gravity Forms on a WordPress site, this plugin forwards each form submission into your Broadcaster inbox as an incoming contact message, and can optionally trigger an approved WhatsApp template reply: one template for business hours, one for outside them, or both. Business hours are the opening hours set on your Company page in Broadcaster.
 
 **Full setup and configuration documentation:** [getbroadcaster.com/docs/gravity-forms-addon](https://getbroadcaster.com/docs/gravity-forms-addon)
 
 = What it does =
 
 * For each form you opt in to, the submission becomes an incoming contact message in Broadcaster, attributed to the form so support staff know where the contact came from.
-* Each submission can trigger one optional template auto-response: either a single template that always fires, or two templates (in-hours / out-of-hours), and Broadcaster picks based on your company's configured business hours.
+* Each submission can trigger an optional template auto-response: one for business hours, one for outside them, or both. Each works on its own, and an empty one sends nothing in those hours.
 * A dedicated **WhatsApp Recipient** custom field (under *Advanced Fields* in the form editor) captures the contact's phone number in a single input, validates the format inline before form submission, and prevents the submitter from accidentally collecting a typo'd number that Broadcaster would later silently fail to deliver to. Or use any standard Gravity Forms field as the recipient mapping for backward compatibility.
 * Phone or WhatsApp username (or both) are mapped from form fields you nominate.
 * Standard Gravity Forms merge tags work in the message body.
@@ -92,8 +92,8 @@ The Broadcaster site URL is hardcoded to `https://getbroadcaster.com` on product
    * **WhatsApp username field**: for contacts who send via WhatsApp username/BSUID rather than phone.
 5. Optionally map a **Submitter name field**.
 6. Write the **Message text** the contact's submission becomes inside Broadcaster. Gravity Forms merge tags work, for example `{Message:5}` or `{Name (First):1.3}`.
-7. Optionally fill the **In-hours template name** (the *internal* name of an approved Broadcaster template). If only this field is set, Broadcaster uses it at all times. If both this and the out-of-hours template name are set, Broadcaster picks by company business hours. If neither is set, no auto-response is sent.
-8. Optionally fill the **Out-of-hours template name** if you want a different reply outside business hours.
+7. Optionally fill in the **In-hours template name** (the *internal* name of an approved Broadcaster template). It is sent during business hours. Leave it empty to send no auto-response in business hours.
+8. Optionally fill in the **Out-of-hours template name**. It is sent outside business hours. Leave it empty to send no auto-response outside business hours. If both are empty, no auto-response is sent. To reply at all hours with one template, enter the same name in both.
 9. Choose templates that use only your business details and opening hours. A reply never includes anything someone typed into the form, such as their name or message, because a form will take any phone number. The plugin checks each template with Broadcaster when you save, and refuses one that needs anything else, saying why.
 10. (Optional) Use Gravity Forms' standard **Conditional logic** to run the feed only when chosen form fields match.
 11. Save the feed. Submit the form to test; the message should appear in Broadcaster within seconds, and the auto-response (if configured) should send shortly after.
@@ -148,6 +148,11 @@ It's a custom field type this plugin adds, found under *Advanced Fields* in the 
 = Phone numbers in national format don't match my existing contacts. Why? =
 
 Broadcaster's phone normalization needs to know which country to interpret a national-format number against. The **WhatsApp Recipient** field handles this for you: configure a default country under *Forms → Settings → Broadcaster → Phone normalisation*, and the field assumes that country whenever a submitter types a national-format number (and overrides it whenever they type an explicit `+` international prefix). For stock Gravity Forms phone fields, configure the field to require international format, or rely on Broadcaster's company-level default phone country.
+
+== Upgrade Notice ==
+
+= 1.2.0 =
+An in-hours template alone no longer replies outside business hours. To reply at all hours, enter the same name in both template fields.
 
 == Changelog ==
 = 1.1.5 =

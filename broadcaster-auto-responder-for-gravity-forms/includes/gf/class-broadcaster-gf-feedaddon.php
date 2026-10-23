@@ -470,7 +470,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			array(
 				'title'       => esc_html__( 'Auto-response template: in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 				// BRO-1831: the reply can only carry the business's own words. Said where the template is chosen.
-				'description' => esc_html__( 'If only this template is filled, Broadcaster uses it at all times. If both in-hours and out-of-hours are filled, Broadcaster picks based on company business hours. If both are blank, no auto-response is sent. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'Each template works on its own: this one is sent during business hours, the out-of-hours one outside them. Leave a template empty to send no auto-response in those hours. To reply at all hours with one template, enter the same name in both. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
 						'label'   => esc_html__( 'In-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -483,7 +483,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			),
 			array(
 				'title'       => esc_html__( 'Auto-response template: out of business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'description' => esc_html__( 'Optional. Only used when an in-hours template is also set.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'Optional. Sent outside business hours. Leave it empty to send no auto-response outside business hours.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
 						'label' => esc_html__( 'Out-of-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
