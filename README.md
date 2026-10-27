@@ -6,7 +6,7 @@ A WordPress plugin that connects [Gravity Forms](https://www.gravityforms.com) t
 
 ## What it does
 
-For each Gravity Form you opt in to, the plugin posts the submission to Broadcaster's `/api/v1/messages/incoming` endpoint as an inbound contact message, attributed to the form. Each feed can also trigger an optional template auto-response: one for business hours, one for outside them, or both. Each works on its own, and an empty one sends nothing in those hours. Business hours are the opening hours set on your Company page in Broadcaster.
+For each Gravity Form you opt in to, the plugin posts the submission to Broadcaster's `/api/v1/messages/incoming` endpoint as an inbound contact message, attributed to the form. Each feed can also trigger an optional template auto-response: a template for business hours, and outside them the same template, a different one or no reply, as the feed's **Outside business hours** setting chooses. Business hours are the opening hours set on your Company page in Broadcaster.
 
 ## Repository layout
 

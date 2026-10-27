@@ -446,10 +446,11 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'tooltip'     => esc_html__( 'Shown in Broadcaster chat bubbles to identify where the message came from. Leave blank to use the form name.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
-						'label'   => esc_html__( 'Recipient field', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'field_select',
-						'name'    => 'recipient_field',
-						'tooltip' => esc_html__( 'Map the form field that captures the contact\'s WhatsApp recipient. For the dedicated "WhatsApp Number" field type, the plugin detects whether the submitter typed a phone number or a @username and routes to the right Broadcaster slot automatically. For any other field type, the value is treated as a phone number.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'               => esc_html__( 'Recipient field', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'                => 'field_select',
+						'name'                => 'recipient_field',
+						'validation_callback' => array( $this, 'validate_recipient_field' ),
+						'tooltip'             => esc_html__( 'Map the form field that captures the contact\'s WhatsApp recipient. For the dedicated "WhatsApp Number" field type, the plugin detects whether the submitter typed a phone number or a @username and routes to the right Broadcaster slot automatically. For any other field type, the value is treated as a phone number.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
 						'label'   => esc_html__( 'Submitter name field', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -470,26 +471,59 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			array(
 				'title'       => esc_html__( 'Auto-response template: in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 				// BRO-1831: the reply can only carry the business's own words. Said where the template is chosen.
-				'description' => esc_html__( 'Each template works on its own: this one is sent during business hours, the out-of-hours one outside them. Leave a template empty to send no auto-response in those hours. To reply at all hours with one template, enter the same name in both. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'This template is sent during business hours. Leave it empty to send no auto-response during business hours. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
-						'label'   => esc_html__( 'In-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'    => 'text',
-						'name'    => 'in_hours_template_name',
-						'class'   => 'medium',
-						'tooltip' => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'               => esc_html__( 'In-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'                => 'text',
+						'name'                => 'in_hours_template_name',
+						'class'               => 'medium',
+						'validation_callback' => array( $this, 'validate_in_hours_template' ),
+						'tooltip'             => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 				),
 			),
 			array(
 				'title'       => esc_html__( 'Auto-response template: out of business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'description' => esc_html__( 'Optional. Sent outside business hours. Leave it empty to send no auto-response outside business hours.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'Choose what happens when someone fills in the form outside business hours.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
-						'label' => esc_html__( 'Out-of-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
-						'type'  => 'text',
-						'name'  => 'out_of_hours_template_name',
-						'class' => 'medium',
+						'label'         => esc_html__( 'Outside business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'          => 'radio',
+						'name'          => \BroadcasterGF\GF\Out_Of_Hours_Reply::SETTING,
+						// BRO-1878: a feed saved before this setting existed shows the choice its templates imply.
+						'default_value' => \BroadcasterGF\GF\Out_Of_Hours_Reply::choice( $this->current_feed_meta() ),
+						'choices'       => array(
+							array(
+								'label' => esc_html__( 'Reply with the same template', 'broadcaster-auto-responder-for-gravity-forms' ),
+								'value' => \BroadcasterGF\GF\Out_Of_Hours_Reply::SAME,
+							),
+							array(
+								'label' => esc_html__( 'Reply with a different template', 'broadcaster-auto-responder-for-gravity-forms' ),
+								'value' => \BroadcasterGF\GF\Out_Of_Hours_Reply::DIFFERENT,
+							),
+							array(
+								'label' => esc_html__( "Don't reply", 'broadcaster-auto-responder-for-gravity-forms' ),
+								'value' => \BroadcasterGF\GF\Out_Of_Hours_Reply::NONE,
+							),
+						),
+					),
+					array(
+						'label'               => esc_html__( 'Out-of-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'                => 'text',
+						'name'                => 'out_of_hours_template_name',
+						'class'               => 'medium',
+						'validation_callback' => array( $this, 'validate_out_of_hours_template' ),
+						'tooltip'             => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'dependency'          => array(
+							'live'   => true,
+							'fields' => array(
+								array(
+									'field'  => \BroadcasterGF\GF\Out_Of_Hours_Reply::SETTING,
+									'values' => array( \BroadcasterGF\GF\Out_Of_Hours_Reply::DIFFERENT ),
+								),
+							),
+						),
 					),
 				),
 			),
@@ -515,6 +549,31 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			'in_hours_template_name'     => esc_html__( 'In-hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
 			'out_of_hours_template_name' => esc_html__( 'Out-of-hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
 		);
+	}
+
+	/**
+	 * Feed list: the template actually sent outside business hours, not what the hidden field holds.
+	 *
+	 * @param array $feed Feed.
+	 * @return string
+	 */
+	public function get_column_value_out_of_hours_template_name( $feed ) {
+		$meta = isset( $feed['meta'] ) && is_array( $feed['meta'] ) ? $feed['meta'] : array();
+		if ( \BroadcasterGF\GF\Out_Of_Hours_Reply::NONE === \BroadcasterGF\GF\Out_Of_Hours_Reply::choice( $meta ) ) {
+			return esc_html__( "Don't reply", 'broadcaster-auto-responder-for-gravity-forms' );
+		}
+		$names = \BroadcasterGF\GF\Out_Of_Hours_Reply::template_names( $meta );
+		return esc_html( $names['out_of_hours_template_name'] );
+	}
+
+	/**
+	 * Meta of the feed being edited, or an empty array for a new feed.
+	 *
+	 * @return array
+	 */
+	private function current_feed_meta() {
+		$feed = $this->get_current_feed();
+		return ( is_array( $feed ) && isset( $feed['meta'] ) && is_array( $feed['meta'] ) ) ? $feed['meta'] : array();
 	}
 
 	/**
@@ -580,19 +639,11 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			$payload['submitter_name'] = $name;
 		}
 
-		$in_hours_template     = trim( (string) rgar( $meta, 'in_hours_template_name' ) );
-		$out_of_hours_template = trim( (string) rgar( $meta, 'out_of_hours_template_name' ) );
-
 		// BRO-1831: template names only. Broadcaster fills a reply to a form with the business's own values and
 		// ignores any sent with it, because a form's answers are whatever a stranger typed. A feed saved by an
 		// earlier version may still hold placeholder settings; they are not sent.
-		if ( '' !== $in_hours_template ) {
-			$payload['in_hours_template_name'] = $in_hours_template;
-		}
-
-		if ( '' !== $out_of_hours_template ) {
-			$payload['out_of_hours_template_name'] = $out_of_hours_template;
-		}
+		// BRO-1878: what is sent outside business hours follows the feed's "Outside business hours" choice.
+		$payload = array_merge( $payload, \BroadcasterGF\GF\Out_Of_Hours_Reply::payload_fields( $meta ) );
 
 		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
 
@@ -843,47 +894,68 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		return (string) \GFCommon::replace_variables( $text, $form, $entry, false, false, false, 'text' );
 	}
 
-	/**
-	 * Whole-feed validation: a recipient field is mapped, and each template can be a reply to a form.
-	 *
-	 * @param array $settings Submitted feed settings.
-	 * @return bool
+	/*
+	 * Save checks. Gravity Forms 2.5+ validates each field through its 'validation_callback' and skips a
+	 * field whose dependency is not met, so the out-of-hours template is checked only with "different
+	 * template". (A whole-feed feed_settings_validation() is never called by Gravity Forms.)
 	 */
-	public function feed_settings_validation( $settings ) {
-		$valid = parent::feed_settings_validation( $settings );
 
-		$recipient = isset( $settings['recipient_field'] ) ? $settings['recipient_field'] : '';
-
-		if ( '' === $recipient ) {
-			$this->set_field_error(
-				array( 'name' => 'recipient_field' ),
-				esc_html__( 'Map a recipient field.', 'broadcaster-auto-responder-for-gravity-forms' )
-			);
-			$valid = false;
+	/**
+	 * Validation callback: a recipient field is mapped.
+	 *
+	 * @param \Gravity_Forms\Gravity_Forms\Settings\Fields\Base $field Settings field.
+	 * @param mixed                                              $value Posted value.
+	 */
+	public function validate_recipient_field( $field, $value ) {
+		if ( '' === trim( (string) $value ) ) {
+			$field->set_error( esc_html__( 'Map a recipient field.', 'broadcaster-auto-responder-for-gravity-forms' ) );
 		}
+	}
 
-		// BRO-1831: refuse, at save, a template Broadcaster would never send in reply to a form, with its reason.
-		// When Broadcaster cannot be asked, the feed saves: a feed should not depend on the network being up at
-		// save time, and Broadcaster still refuses to send such a reply (and says why on the conversation).
+	/**
+	 * Validation callback: the in-hours template, if any, can be sent in reply to a form.
+	 *
+	 * @param \Gravity_Forms\Gravity_Forms\Settings\Fields\Base $field Settings field.
+	 * @param mixed                                              $value Posted value.
+	 */
+	public function validate_in_hours_template( $field, $value ) {
+		$this->validate_reply_template( $field, trim( (string) $value ) );
+	}
+
+	/**
+	 * Validation callback: with "different template", one is entered and it can be sent in reply to a form.
+	 *
+	 * @param \Gravity_Forms\Gravity_Forms\Settings\Fields\Base $field Settings field.
+	 * @param mixed                                              $value Posted value.
+	 */
+	public function validate_out_of_hours_template( $field, $value ) {
+		$error = \BroadcasterGF\GF\Out_Of_Hours_Reply::out_of_hours_template_error( $value );
+		if ( null !== $error ) {
+			$field->set_error( $error );
+			return;
+		}
+		$this->validate_reply_template( $field, trim( (string) $value ) );
+	}
+
+	/**
+	 * BRO-1831: refuse, at save, a template Broadcaster would never send in reply to a form, with its reason.
+	 * When Broadcaster cannot be asked, the feed saves: a feed should not depend on the network being up at
+	 * save time, and Broadcaster still refuses to send such a reply (and says why on the conversation).
+	 *
+	 * @param \Gravity_Forms\Gravity_Forms\Settings\Fields\Base $field Settings field.
+	 * @param string                                             $name  Trimmed template name.
+	 */
+	private function validate_reply_template( $field, $name ) {
 		$api_key = $this->get_api_key();
-		if ( '' !== $api_key ) {
-			$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
-			foreach ( array( 'in_hours_template_name', 'out_of_hours_template_name' ) as $slot ) {
-				$name = isset( $settings[ $slot ] ) ? trim( (string) $settings[ $slot ] ) : '';
-				if ( '' === $name ) {
-					continue;
-				}
-				$check = $client->check_reply_template( $name );
-				if ( false === $check['usable'] ) {
-					$this->set_field_error(
-						array( 'name' => $slot ),
-						null !== $check['reason'] ? esc_html( $check['reason'] ) : esc_html__( 'Broadcaster cannot send this template as a reply to a form.', 'broadcaster-auto-responder-for-gravity-forms' )
-					);
-					$valid = false;
-				}
-			}
+		if ( '' === $name || '' === $api_key ) {
+			return;
 		}
-
-		return $valid;
+		$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
+		$check  = $client->check_reply_template( $name );
+		if ( false === $check['usable'] ) {
+			$field->set_error(
+				null !== $check['reason'] ? esc_html( $check['reason'] ) : esc_html__( 'Broadcaster cannot send this template as a reply to a form.', 'broadcaster-auto-responder-for-gravity-forms' )
+			);
+		}
 	}
 }

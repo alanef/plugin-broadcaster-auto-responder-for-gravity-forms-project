@@ -93,7 +93,7 @@ The Broadcaster site URL is hardcoded to `https://getbroadcaster.com` on product
 5. Optionally map a **Submitter name field**.
 6. Write the **Message text** the contact's submission becomes inside Broadcaster. Gravity Forms merge tags work, for example `{Message:5}` or `{Name (First):1.3}`.
 7. Optionally fill in the **In-hours template name** (the *internal* name of an approved Broadcaster template). It is sent during business hours. Leave it empty to send no auto-response in business hours.
-8. Optionally fill in the **Out-of-hours template name**. It is sent outside business hours. Leave it empty to send no auto-response outside business hours. If both are empty, no auto-response is sent. To reply at all hours with one template, enter the same name in both.
+8. Under **Outside business hours**, choose what happens when someone fills in the form outside business hours: **Reply with the same template** (the default), **Reply with a different template**, then enter its name in **Out-of-hours template name**, or **Don't reply**. Business hours are the opening hours set on your Company page in Broadcaster.
 9. Choose templates that use only your business details and opening hours. A reply never includes anything someone typed into the form, such as their name or message, because a form will take any phone number. The plugin checks each template with Broadcaster when you save, and refuses one that needs anything else, saying why.
 10. (Optional) Use Gravity Forms' standard **Conditional logic** to run the feed only when chosen form fields match.
 11. Save the feed. Submit the form to test; the message should appear in Broadcaster within seconds, and the auto-response (if configured) should send shortly after.
@@ -152,7 +152,7 @@ Broadcaster's phone normalization needs to know which country to interpret a nat
 == Upgrade Notice ==
 
 = 1.2.0 =
-An in-hours template alone no longer replies outside business hours. To reply at all hours, enter the same name in both template fields.
+A new Outside business hours setting chooses the reply outside business hours: the same template, a different one, or none. Existing feeds keep replying as they do now.
 
 == Changelog ==
 = 1.1.5 =
