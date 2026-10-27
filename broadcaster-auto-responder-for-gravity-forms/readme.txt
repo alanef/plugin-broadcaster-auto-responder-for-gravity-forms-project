@@ -152,7 +152,7 @@ Broadcaster's phone normalization needs to know which country to interpret a nat
 == Upgrade Notice ==
 
 = 1.2.0 =
-New Outside business hours setting: reply with the same template, a different one, or not at all. Existing feeds keep replying as they do now. Feeds are now checked when you save them, so editing an older feed may show Broadcaster's reason a template cannot be sent as a reply. Choose another template to save it.
+New Outside business hours setting: reply with the same template, a different one, or none. Existing feeds keep replying as they do now. Feeds are now checked when you save them: if Broadcaster cannot send an older feed's template as a reply, saving shows why. Choose another template to save it.
 
 == Changelog ==
 = 1.1.5 =
