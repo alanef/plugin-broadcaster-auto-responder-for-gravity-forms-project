@@ -104,7 +104,7 @@ final class Out_Of_Hours_Reply {
 	 */
 	public static function out_of_hours_template_error( $value ) {
 		if ( '' === trim( (string) $value ) ) {
-			return esc_html__( 'Enter the template to send outside business hours.', 'broadcaster-auto-responder-for-gravity-forms' );
+			return esc_html__( 'Enter the name of the template to send outside business hours.', 'broadcaster-auto-responder-for-gravity-forms' );
 		}
 		return null;
 	}

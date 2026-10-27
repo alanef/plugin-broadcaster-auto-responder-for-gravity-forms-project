@@ -471,10 +471,10 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			array(
 				'title'       => esc_html__( 'Auto-response template: in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 				// BRO-1831: the reply can only carry the business's own words. Said where the template is chosen.
-				'description' => esc_html__( 'This template is sent during business hours. Leave it empty to send no auto-response during business hours. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, never what someone typed into the form, because a form will take any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'This template is sent during business hours. Leave it empty to send no auto-response during business hours. With Reply with the same template, that means no reply outside business hours either. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, but never what someone typed into the form, because anyone can enter any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
-						'label'               => esc_html__( 'In-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'               => esc_html__( 'Template name for business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'                => 'text',
 						'name'                => 'in_hours_template_name',
 						'class'               => 'medium',
@@ -509,7 +509,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						),
 					),
 					array(
-						'label'               => esc_html__( 'Out-of-hours template name', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'label'               => esc_html__( 'Template name for outside business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'                => 'text',
 						'name'                => 'out_of_hours_template_name',
 						'class'               => 'medium',
@@ -546,8 +546,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	public function feed_list_columns() {
 		return array(
 			'feedName'                   => esc_html__( 'Name', 'broadcaster-auto-responder-for-gravity-forms' ),
-			'in_hours_template_name'     => esc_html__( 'In-hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
-			'out_of_hours_template_name' => esc_html__( 'Out-of-hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'in_hours_template_name'     => esc_html__( 'Business hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
+			'out_of_hours_template_name' => esc_html__( 'Outside business hours template', 'broadcaster-auto-responder-for-gravity-forms' ),
 		);
 	}
 
@@ -908,7 +908,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 */
 	public function validate_recipient_field( $field, $value ) {
 		if ( '' === trim( (string) $value ) ) {
-			$field->set_error( esc_html__( 'Map a recipient field.', 'broadcaster-auto-responder-for-gravity-forms' ) );
+			$field->set_error( esc_html__( 'Choose the form field that holds the phone number.', 'broadcaster-auto-responder-for-gravity-forms' ) );
 		}
 	}
 

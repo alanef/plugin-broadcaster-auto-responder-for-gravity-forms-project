@@ -129,9 +129,9 @@ final class OutOfHoursReplyTest extends TestCase {
 	// --- Saving: "different template" needs a template ---
 
 	public function test_empty_out_of_hours_template_is_refused_with_a_message(): void {
-		$this->assertSame( 'Enter the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( '' ) );
-		$this->assertSame( 'Enter the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( '   ' ) );
-		$this->assertSame( 'Enter the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( null ) );
+		$this->assertSame( 'Enter the name of the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( '' ) );
+		$this->assertSame( 'Enter the name of the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( '   ' ) );
+		$this->assertSame( 'Enter the name of the template to send outside business hours.', Out_Of_Hours_Reply::out_of_hours_template_error( null ) );
 	}
 
 	public function test_named_out_of_hours_template_is_not_refused(): void {
