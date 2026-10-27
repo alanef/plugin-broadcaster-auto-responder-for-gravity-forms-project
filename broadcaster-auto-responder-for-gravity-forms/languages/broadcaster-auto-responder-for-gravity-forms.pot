@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T08:27:34+00:00\n"
+"POT-Creation-Date: 2026-10-27T08:28:28+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: broadcaster-auto-responder-for-gravity-forms\n"
@@ -267,7 +267,7 @@ msgid "Auto-response template: in business hours"
 msgstr ""
 
 #: includes/gf/class-broadcaster-gf-feedaddon.php:474
-msgid "This template is sent during business hours. Leave it empty to send no auto-response during business hours. With Reply with the same template, that means no reply outside business hours either. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, but never what someone typed into the form, because anyone can enter any phone number. A template that needs anything else is refused when you save."
+msgid "This template is sent during business hours. Leave it empty to send no auto-response during business hours. If Outside business hours is set to \"Reply with the same template\", that means no reply outside business hours either. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, but never what someone typed into the form, because anyone can enter any phone number. A template that needs anything else is refused when you save."
 msgstr ""
 
 #: includes/gf/class-broadcaster-gf-feedaddon.php:477

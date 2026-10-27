@@ -471,7 +471,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 			array(
 				'title'       => esc_html__( 'Auto-response template: in business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
 				// BRO-1831: the reply can only carry the business's own words. Said where the template is chosen.
-				'description' => esc_html__( 'This template is sent during business hours. Leave it empty to send no auto-response during business hours. With Reply with the same template, that means no reply outside business hours either. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, but never what someone typed into the form, because anyone can enter any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'description' => esc_html__( 'This template is sent during business hours. Leave it empty to send no auto-response during business hours. If Outside business hours is set to "Reply with the same template", that means no reply outside business hours either. Business hours are the opening hours set on your Company page in Broadcaster. A reply can use your business details and opening hours, but never what someone typed into the form, because anyone can enter any phone number. A template that needs anything else is refused when you save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 				'fields'      => array(
 					array(
 						'label'               => esc_html__( 'Template name for business hours', 'broadcaster-auto-responder-for-gravity-forms' ),
