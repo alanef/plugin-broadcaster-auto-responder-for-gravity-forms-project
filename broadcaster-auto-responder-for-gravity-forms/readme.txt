@@ -160,14 +160,14 @@ Wp Org release
 
 = 1.1.4 =
 * **WordPress.org compliance.** All admin JavaScript and CSS is now loaded through the standard WordPress enqueue functions instead of being printed inline. The form-editor helper script and the connection-status styling load via `wp_enqueue_script` / `wp_enqueue_style`; there is no change to how the plugin behaves.
-* **Hardening.** Auto-response and recipient-rejection details returned by Broadcaster are now passed through `sanitize_text_field()` before being written to a Gravity Forms entry note.
+* **Security:** improved security.
 * **WhatsApp Recipient field** now uses natural tab order rather than emitting its own tabindex attribute. On the vast majority of forms this is invisible; forms that set a custom Gravity Forms tab-index start will see this field follow normal source order.
 * **Maintenance:** removed the placeholder Screenshots section from the readme until images are bundled, deleted an unused internal helper, and updated the development environment dependency.
 
 = 1.1.3 =
 * **Privacy disclosure.** Added a Privacy section to this readme spelling out exactly what submission data is sent to Broadcaster, and registered suggested privacy-policy text in WordPress (*Settings → Privacy*) so site owners can disclose the data flow to their visitors. The plugin's data handling is unchanged; this surfaces what already happens.
 * **Admin notices are now scoped.** The "Gravity Forms not active" and "API key not configured" warnings now appear only on the Plugins list, Dashboard, and Gravity Forms admin pages (where they're actionable) instead of on every admin screen. Both still disappear automatically once resolved.
-* **Maintenance:** pointed the plugin / add-on link at the documentation page (`getbroadcaster.com/docs/gravity-forms-addon`), inlined output escaping in the form-editor inline script, and documented why the Gravity Forms tab-index attribute is emitted as-is. No functional change.
+* **Maintenance:** pointed the plugin / add-on link at the documentation page (`getbroadcaster.com/docs/gravity-forms-addon`), tidied the form-editor inline script, and documented why the Gravity Forms tab-index attribute is emitted as-is. No functional change.
 
 = 1.1.2 =
 * **The auto-response outcome is now visible in Gravity Forms.** After Broadcaster accepts a submission, the plugin reads the `auto_response` block from the response and writes a clearer entry note: "sent auto-response (`<template>`, slot: `<in_hours|out_of_hours>`)" when the reply went out, "auto-response failed: `<error_code>` - `<message>`" when Broadcaster declined to send it (e.g. a missing template placeholder or an unapproved template), or the existing "received this submission (HTTP 201)." when the feed has no template configured. The full result is also logged under *Forms → Settings → Logging* with the entry ID for correlation.
