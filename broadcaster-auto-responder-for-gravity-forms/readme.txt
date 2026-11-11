@@ -3,7 +3,7 @@ Contributors: fullworks, alanfuller
 Tags: gravity forms, broadcaster, whatsapp, contact form, auto responder
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 1.1.5
+Stable tag: 1.2.0
 Type: free
 Requires PHP: 7.4
 License: GPLv2 or later
