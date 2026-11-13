@@ -2,12 +2,12 @@
   "issue_id": "BRO-2014",
   "scan_date": "2026-11-13",
   "scanned_by": "AI Assistant",
-  "commit_range": "2a4fec0..b6c0a81",
+  "commit_range": "2a4fec0..a0177e3",
   "files_analyzed": [
     "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
     "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
-    "broadcaster-auto-responder-for-gravity-forms/includes/class-plugin.php",
     "tests/unit/MarketingOptInTest.php",
+    "tests/probes/marketing-opt-in-probe.php",
     "broadcaster-auto-responder-for-gravity-forms/readme.txt",
     "broadcaster-auto-responder-for-gravity-forms/changelog.txt"
   ],
@@ -15,29 +15,36 @@
     {
       "severity": "Low",
       "category": "A04: Insecure Design",
-      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
-      "description": "Checkbox wording is read from the form when the feed runs; a feed run later sends the label current then. Consent fields use the entry's own text.",
-      "recommendation": "Accept for 1.3.0; note for Broadcaster's consent record."
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+      "description": "Third-party gform_pre_render callbacks also run at submission (form_config context, as Gravity Forms does for its config). Prechecked is approximate.",
+      "recommendation": "PLUGINS Manager decision recorded in verification.md."
     },
     {
       "severity": "Info",
       "category": "A03: Injection",
-      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
-      "description": "Only visitor-sent wording is the consent .2, protected by Gravity Forms state validation (probe: tampered state refused). Sent as JSON.",
-      "recommendation": "Broadcaster escapes the wording wherever it shows it."
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+      "description": "Notice, validation error and entry note escaped; consent .2 tampering refused by Gravity Forms (probe C2).",
+      "recommendation": "None."
     },
     {
       "severity": "Info",
       "category": "A01: Broken Access Control",
       "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
-      "description": "Reference is a wp-admin URL from int-cast ids; only a logged-in admin can open it.",
+      "description": "Reference built from int-cast ids; snapshot written server-side only.",
       "recommendation": "None."
     },
     {
       "severity": "Info",
       "category": "Data Protection",
       "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
-      "description": "New data sent is disclosed in readme Privacy and Settings > Privacy text; new log line holds ids only; nothing new stored.",
+      "description": "Snapshot in entry meta copies what the entry records and is deleted with it; logs hold ids and state only.",
+      "recommendation": "None."
+    },
+    {
+      "severity": "Info",
+      "category": "Consent integrity",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
+      "description": "A box hidden by conditional logic or Administrative/Hidden visibility sends nothing (probe F4, V1).",
       "recommendation": "None."
     }
   ],
@@ -46,14 +53,15 @@
     "high": 0,
     "medium": 0,
     "low": 1,
-    "info": 3,
-    "total": 4
+    "info": 4,
+    "total": 5
   },
   "recommendation": "PASS_WITH_NOTES",
   "blocking_issues": [],
   "notes": [
-    "Instrument validation: phpcs security standard does not flag removed escaping on a returned string (control mutation, exit 0); the unit test does.",
-    "Secret-exposure grep validated against 66cfd84^ (BRO-1468); lower bound.",
-    "Personal-data-in-logs check is UNVALIDATED: no previous fix of the class exists in this repo."
+    "Earlier Low (wording read when the feed runs) closed by a0177e3.",
+    "phpcs security standard is not an instrument for escaping in returned strings (BRO-2003 W1); escaping checked by reading each output.",
+    "Secret-exposure grep validated against 66cfd84^ (BRO-1468); 0 hits in range.",
+    "Personal-data-in-logs check is UNVALIDATED: no earlier fix of the class in this repo."
   ]
 }

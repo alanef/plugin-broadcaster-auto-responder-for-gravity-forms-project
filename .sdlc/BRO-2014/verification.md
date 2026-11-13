@@ -1,7 +1,7 @@
 # Verification Report: BRO-2014
 
 **Issue:** BRO-2014, Gravity Forms auto-responder: Marketing opt-in field on each feed (ships in 1.3.0)
-**Date:** 2026-11-13
+**Date:** 2026-11-13 (second run, after PLUGINS Manager's second-reader FAIL at 0de5bf8)
 **Branch:** develop
 
 ## Executive Summary
@@ -9,141 +9,116 @@
 | Check | Result |
 |---|---|
 | Claimed-commit integrity | PASSED |
-| Code review | PASS after fix (1 critical found and fixed in b6c0a81; 0 open critical, 1 open warning, 4 suggestions) |
-| Evidence can fail (mutation) | PASSED (12 mutations, all caught; 1 inert test found and fixed) |
-| Acceptance review | PASS (10/10 requirements) |
-| Browser/UI gate | Not applicable: PHP only, no templates or assets changed; settings field checked through Gravity Forms in wp-env |
+| Second-reader findings 1 to 6 | All reproduced on 0de5bf8 before the fix; all fixed in a0177e3 |
+| Code review | PASS after fix (independent review of the fix: 0 critical, 3 warnings and 2 suggestions, all fixed before commit) |
+| Evidence can fail (mutation) | PASSED (10 unit mutations: 9 caught at first, 1 inert test found and fixed; probe positive control fails) |
+| Acceptance review | PASS (findings 1 to 6 and the earlier contract) |
+| Browser/UI gate | Not applicable: PHP only; checked through Gravity Forms in wp-env |
 | Security | PASS_WITH_NOTES, see `security-scan.md` |
-| **Overall** | **READY** for 1.3.0 |
+| Open decision | Prechecked limitation (below) for PLUGINS Manager |
+| **Overall** | **READY** for 1.3.0, subject to that decision |
 
 ## Commit Range Covered
 
-**Commit range covered:** `2a4fec0..b6c0a81`
+**Commit range covered:** `2a4fec0..a0177e3`
 
 | SHA | Subject |
 |---|---|
 | 2a4fec0 | BRO-2014: Marketing opt-in field on each feed |
 | b6c0a81 | BRO-2014: pair a Multiple Choice field's ticked box with its own words |
-
-This repo's commit subjects are `BRO-NNNN: ...`, not conventional-commit scopes, so the skill's regex
-`[a-z]+\(...\):` matches nothing here. The match used is anchored on the subject prefix instead:
+| a0177e3 | BRO-2014: take the marketing opt-in answer at submission and find the box by its value |
 
 ```bash
 git fetch --all
 git log --format='%h %s' origin/develop | grep -E '^[0-9a-f]+ BRO-2014:'
 ```
 
-Anything that prints which is not in the table landed after this run. The evidence commit itself
-(subject `SDLC evidence: ...`) is docs only and deliberately does not match.
+Anything else that prints landed after this run. Evidence commits (`SDLC evidence: ...`) deliberately do not match.
 
 ## Claimed-Commit Integrity
 
-`git fetch --all`, then `git cat-file -e` and `git branch -a --contains`:
+| SHA | Result |
+|---|---|
+| 2a4fec0, b6c0a81 | OK: develop, origin/develop, mirror/develop |
+| a0177e3 | OK: develop, origin/develop (mirror updates on its own schedule) |
 
-| SHA | Repo | Result |
-|---|---|---|
-| 2a4fec0 | this repo | OK: develop, origin/develop, mirror/develop |
-| 6b66f07ac | broadcaster-web (contract on BRO-2012, cited in the plan) | OK: on broadcaster-web origin/develop; not this repo's code |
+Spot-check: `resave_error`, `snapshot_marketing_opt_in` and the changelog words "whether it started ticked" are on develop.
 
-Change-set is not empty (2a4fec0: 6 files, 458 insertions). Spot-check: the claimed setting label, the validation
-message "more than one box" and the readme FAQ "What does the Marketing opt-in field do?" are all
-found on develop with `git grep`.
+## Second-Reader Findings (PLUGINS Manager, FAIL at 0de5bf8)
+
+Each was reproduced on 0de5bf8 in wp-env (Gravity Forms 2.10.2) before the fix; the table is on BRO-2014.
+
+| # | Finding | Fix (a0177e3) | Evidence |
+|---|---|---|---|
+| 1 | Input ids renumbered by position; feed kept the old id | The chosen box's value and text are saved with the feed (`save_feed_settings`); the answer is found by value. A removed box sends nothing and adds an entry note; the feed page says when the box moved or went; saving the old id onto another box is refused | Unit: moved, removed, ambiguous, resave; probe S1, F1 x5 |
+| 2 | Wording read when the feed runs, not when the visitor submitted | Snapshot on `gform_entry_created` (after the spam flag, before feeds) in entry meta, per feed; the feed sends only the snapshot; no snapshot sends nothing | Unit; probe F2a (spam, relabel, Not spam sends the original words), F2b, F2 (API entry with no snapshot) |
+| 3 | Prechecked missed boxes ticked by population or pre_render | Prechecked is true when the field allows dynamic population or the rendered choice (`GFFormDisplay::gform_pre_render( $form, 'form_config' )`, GF 2.9+) is preselected | Unit; probe F2b/F3, F3 |
+| 4 | A field hidden by conditional logic sent false | Hidden (`GFFormsModel::is_field_hidden`) sends nothing. Also Administrative or Hidden visibility (found in review) | Unit; probe F4, V1 |
+| 5 | Product option, survey, quiz, poll checkboxes accepted | Only `checkbox`, `multi_choice` (checkbox input) and `consent`; refused on save; the field list is limited too (`field_types`) | Unit; probe F5 |
+| 6 | `plain()` mangled a literal "<" | Only real tags, comments and declarations are removed | Unit: "<3", "a < b > c" |
+
+Also asked: the changelog says "whether it started ticked" (done); a test on real `GF_Field` objects (the probe, committed at `tests/probes/marketing-opt-in-probe.php`); consent `.2` tampering is refused by Gravity Forms (probe C2).
+
+### Open decision: prechecked limitation
+
+Captured server-side at submission from what Gravity Forms 2.9+ offers outside display (`gform_pre_render` in `form_config` context) plus the field's dynamic-population setting. Not seen: a `gform_pre_render` that depends on display-only state (the query string through `$field_values`, cookies, `$ajax`), or any change made in the browser. "Value arriving matches the pre-render state" is approximated, not exact. Calling `gform_pre_render` at submission also runs third-party callbacks where they did not run before; Gravity Forms itself does this for its own config. For PLUGINS Manager to decide.
 
 ## Code Review
 
-Independent review (a separate agent given the diff, not this session's conclusions), with a wp-env
-probe against Gravity Forms 2.10.2 using real `GF_Field` objects.
+Independent review of the fix (a separate agent given the diff and the brief, not this session's conclusions). It checked the GF API use against the 2.10.2 source. All points were fixed before commit, each with a test that fails on the earlier version:
 
-### Critical (fixed)
+1. **Warning, fixed:** a field with Administrative or Hidden visibility, set to start ticked, stores a tick nobody saw (GF `get_field_value` fills an administrative field's default, forms_model.php:3678; probe V1 shows the tick stored). Now refused on save and treated as hidden.
+2. **Warning, fixed:** a feed with no saved box (made by the API) could never be saved again with the same box. Now let through; the save records the box (`resave_error`).
+3. **Warning, fixed:** the notice said "no opt-in is sent" when the box had only moved, but it is still sent by value. The notice now says which.
+4. **Suggestion, fixed:** the wording was cleaned twice, decoding entities shown literally. `payload_fields` now only cuts.
+5. **Suggestion, fixed:** `gform_pre_render`'s per-request cache is flushed before and after the call.
 
-1. `includes/gf/class-marketing-opt-in.php` `target()`: paired `inputs[$i]` with `choices[$i]` by
-   position. Gravity Forms 2.9+ Multiple Choice and Image Choice fields (inputType `checkbox`) link
-   them by `key`, and moving a choice in the editor reorders choices but not inputs. Reproduced in a
-   unit test before the fix: a tick on "Yes send offers" was sent with the words "No marketing
-   please" and the wrong prechecked value. **Fixed in b6c0a81**: keyed inputs match by key (as
-   `GF_Field::get_choice_id_from_input_key` does); a key with no matching choice is not a box.
-   Checked in wp-env with a real `multi_choice` field stored as choices `[kb, ka]`, inputs `[ka, kb]`:
-   5.1 ticked sends "Yes send offers", prechecked true; 5.2 ticked sends "No marketing please",
-   prechecked false. The ten original probe cases (A to J) give identical results after the fix.
-
-### Warning (open, not blocking)
-
-2. Test coverage: `process_feed`'s log line for an unreadable mapping is not unit-tested (Gravity
-   Forms is not loaded in the unit suite). It is exercised in the wp-env probe cases I and J.
-
-### Suggestions (open)
-
-3. Checkbox wording is read from the form when the feed runs, not when the form was submitted. A
-   feed that runs later (an entry marked "Not spam", a payment-delayed feed) sends the label as it is
-   then. Consent fields are unaffected: their wording comes from the entry's `.2`.
-4. Without mbstring, `substr` may cut inside a UTF-8 character at 255. `wp_json_encode` repairs it,
-   so no 422; the last character is lost.
-5. Unit fixtures are arrays; real `GF_Field` objects (ArrayAccess) are covered only by the wp-env probe.
-6. Whole-field mapping now also requires exactly one choice as well as one input (tightened in b6c0a81).
-
-No PHP 7.4 problems. No path to a 422: wording is capped at 255 characters, the reference at 500, and
-nothing is sent when there are no words or no mapping.
+Open: `snapshot_marketing_opt_in`, `marketing_opt_in_payload` and `save_feed_settings` are covered by the wp-env probe, not the unit suite (Gravity Forms is not loaded there).
 
 ## Can the Evidence Fail? (Phase 2.5)
 
-Mutations of `class-marketing-opt-in.php` in a scratch copy of the working tree, `MarketingOptInTest`
-run each time. Unmutated control: OK (17 tests).
+Mutations of `class-marketing-opt-in.php`, `MarketingOptInTest` run each time. Control: OK (26 tests at the time).
 
 | Mutation | Caught by |
 |---|---|
-| M0 payload always empty (positive control) | 12 tests |
-| M1 checkbox tick inverted | 6 tests |
-| M2 consent never ticked | ticked consent sends the text the visitor saw |
-| M3 prechecked always false | box set to start ticked says so |
-| M4 wording not cut | wording cut to 255 characters |
-| M5 whole field with any number of boxes | whole field only when one box |
-| M6 choice index off by one | second choice; choice past the ninth |
-| M7 consent wording always the label | ticked consent sends the text the visitor saw |
-| M8 no label fallback | box with no words falls back to label |
-| M9 any consent input is the box | consent Text or Description input is not the box |
-| M10 blank wording still sent | box with no words sends nothing |
-| M11 markup kept | markup in the label is sent as the words read |
-| Keyed choices paired by position (the critical above) | keyed choice reordered in the editor |
+| N0 payload always empty (positive control) | 16 tests |
+| N1 tick read at the saved input id (old behaviour) | moved box; whole field |
+| N2 dynamic population ignored | may have started ticked |
+| N3 conditional logic ignored | hidden by conditional logic |
+| N4 any checkbox type accepted | product, survey, quiz, poll refused |
+| N5 old tag stripping | literal "<" kept |
+| N6 rendered fields ignored | words rendered by a filter; started ticked |
+| N7 pre_render tick ignored | keyed choice; started ticked |
+| N8 snapshot without "ok" state accepted | **survived at first: inert.** The no-snapshot test passed no snapshot with an answer. Fixed by testing every non-ok state with an answer; re-run fails |
+| N9 value match skipped when not found | removed or ambiguous box |
 
-Survivors under M0, one line each:
-- Unmapped sends none: legitimate negative control, expects nothing.
-- Consent Text or Description input is not the box: legitimate, expects nothing plus a mapping error.
-- Another field type sends nothing: legitimate, expects nothing plus a mapping error.
-- Entry reference is the admin URL: legitimate, tests a different method.
-- No reference leaves the key out: **could not detect "send nothing"** (asserting a key is absent
-  passes on an empty array). Finding, fixed in b6c0a81: the test now also asserts the answer is
-  sent. Re-run of M0: it fails.
+Survivors under N0, one line each: unmapped, no snapshot, consent text input, product refused, other field type and removed box all expect nothing (legitimate negative controls); literal "<" and entry reference test other methods; hidden expects nothing; rendered words asserts the snapshot directly.
 
-Survivors under M1 to M11 are the tests of the other properties, each untouched by that one mutation.
-No permission or cross-tenant tests in this change; no comparison claim is made.
+Probe positive control: with the `gform_entry_created` hook removed, the probe fails at B1 (no opt-in sent).
+
+The four tests added after review fail on the pre-review class and pass after.
+
+No permission or cross-tenant tests; no comparison claim.
 
 ## Acceptance Review
 
-| Requirement (BRO-2014 contract, 11 and 12 Nov; BRO-2012 published contract) | Evidence | Result |
+| Requirement | Evidence | Result |
 |---|---|---|
-| Feed setting "Marketing opt-in field", optional, checkbox or consent | `field_select` with `input_types` checkbox, consent; probe choice list | Met |
-| `marketing_opt_in` true when ticked, false when not | Probe A to G, K to M; unit tests | Met |
-| `marketing_opt_in_wording`: the words seen, at most 255 | Probe A (markup stripped), E (entry `.2`); unit 255-char multibyte test | Met |
-| `marketing_opt_in_prechecked` | Probe C, D, K, M | Met |
-| `marketing_opt_in_reference`: entry admin URL, at most 500 | Probe ref `admin.php?page=gf_entries&view=entry&id={FORM}&lid={ENTRY}`; unit 500 test | Met |
-| Unmapped: none of the fields sent | Probe H; unit unmapped test | Met |
-| Never a 422 that loses the enquiry | Caps, and no wording means nothing sent (unit) | Met |
-| No default tick or legal wording from the plugin | Code read: no defaults; tooltip has no legal text | Met |
-| Readme and settings help explain it | readme Configure step 5, FAQ, Privacy; tooltip; Settings > Privacy text | Met |
-| Changelog under Unreleased | `changelog.txt` Added line | Met |
+| Findings 1 to 6 (above) | Unit and probe | Met |
+| `marketing_opt_in`, `_wording` (max 255), `_prechecked`, `_reference` (max 500) | Unit; probe | Met |
+| Unmapped: none of the fields | Unit | Met |
+| Never a 422 that loses the enquiry | Caps; nothing sent without words; the message itself is still sent when the opt-in is not (probe F1, F2, F4, V1) | Met |
+| No default tick or legal wording from the plugin | Code read | Met |
+| Readme, tooltip, changelog | Updated in a0177e3, changelog under Unreleased | Met |
 
-Order of release: live broadcaster-web v2.5.1 passes on only validated fields
-(`IncomingMessageController::store`, `$request->validate([...])`, read at tag v2.5.1), so the new
-keys are dropped, not refused, until BRO-2012 is live. 1.3.0 does not depend on it. This was read in
-the source, not sent to the live API (a live send would create a real message).
+Tests changed: `MarketingOptInTest` (written in this issue by this session) was rewritten for the snapshot API; all earlier cases are kept.
 
 ## Test Runs
 
-- Unit: `vendor/bin/phpunit -c tests/phpunit-unit.xml.dist`: OK (161 tests, 259 assertions)
+- Unit: `vendor/bin/phpunit -c tests/phpunit-unit.xml.dist`: OK (173 tests, 326 assertions)
 - Lint: `composer phpcs`, `composer compat:7.4`, `composer compat:8.4`: exit 0
-- wp-env, Gravity Forms 2.10.2, HTTP faked, fixture identity (+447700900123, Ofcom drama range):
-  cases A to M as above
-- CI on 2a4fec0: run 43456100131 success; CI on b6c0a81: see the push of this evidence
+- wp-env probe, Gravity Forms 2.10.2, real `GF_Field_Checkbox` objects, HTTP faked, fixture number +447700900123 (Ofcom drama range): 23/23 PASS
+- CI on a0177e3: run 43462427508 success (PHPUnit wp-env; PHPCS, version consistency and Plugin Check)
 
 ---
 Verified by: AI Assistant
