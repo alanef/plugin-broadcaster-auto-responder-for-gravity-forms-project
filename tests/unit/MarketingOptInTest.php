@@ -97,6 +97,38 @@ final class MarketingOptInTest extends TestCase {
 		$this->assertSame( 'Choice 10', $out['marketing_opt_in_wording'] );
 	}
 
+	public function test_a_keyed_choice_reordered_in_the_editor_keeps_its_own_words(): void {
+		// Gravity Forms 2.9+ Multiple Choice and Image Choice fields link inputs to choices by key. Moving a choice
+		// in the form editor reorders the choices but never the inputs, so position no longer pairs them.
+		$fields = array(
+			array(
+				'id'        => 6,
+				'type'      => 'multi_choice',
+				'inputType' => 'checkbox',
+				'label'     => 'Keep in touch',
+				'choices'   => array(
+					array( 'text' => 'No marketing please', 'value' => 'b', 'key' => 'kb' ),
+					array( 'text' => 'Yes send offers', 'value' => 'a', 'key' => 'ka', 'isSelected' => true ),
+				),
+				'inputs'    => array(
+					array( 'id' => '6.1', 'label' => 'Yes send offers', 'key' => 'ka' ),
+					array( 'id' => '6.2', 'label' => 'No marketing please', 'key' => 'kb' ),
+				),
+			),
+		);
+
+		$yes = Marketing_Opt_In::payload_fields( '6.1', $fields, array( '6.1' => 'a', '6.2' => '' ), self::REF );
+		$this->assertSame( array( true, 'Yes send offers', true ), array( $yes['marketing_opt_in'], $yes['marketing_opt_in_wording'], $yes['marketing_opt_in_prechecked'] ) );
+
+		$no = Marketing_Opt_In::payload_fields( '6.2', $fields, array( '6.1' => '', '6.2' => 'b' ), self::REF );
+		$this->assertSame( array( true, 'No marketing please', false ), array( $no['marketing_opt_in'], $no['marketing_opt_in_wording'], $no['marketing_opt_in_prechecked'] ) );
+
+		// A key with no matching choice is not a box: guessing by position could send the wrong words.
+		$fields[0]['inputs'][0]['key'] = 'gone';
+		$this->assertSame( array(), Marketing_Opt_In::payload_fields( '6.1', $fields, array( '6.1' => 'a' ), self::REF ) );
+		$this->assertNotNull( Marketing_Opt_In::mapping_error( '6.1', $fields ) );
+	}
+
 	public function test_a_box_the_business_set_to_start_ticked_says_so(): void {
 		$fields = array( $this->checkbox( array( array( 'text' => 'Yes please', 'value' => 'y', 'isSelected' => true ) ) ) );
 
@@ -196,7 +228,10 @@ final class MarketingOptInTest extends TestCase {
 
 	public function test_no_reference_leaves_the_key_out(): void {
 		$fields = array( $this->checkbox( array( array( 'text' => 'Yes', 'value' => 'y' ) ) ) );
-		$this->assertArrayNotHasKey( 'marketing_opt_in_reference', Marketing_Opt_In::payload_fields( '5.1', $fields, array( '5.1' => 'y' ), '' ) );
+		$out    = Marketing_Opt_In::payload_fields( '5.1', $fields, array( '5.1' => 'y' ), '' );
+		// The answer is still sent: only the reference is missing.
+		$this->assertTrue( $out['marketing_opt_in'] );
+		$this->assertArrayNotHasKey( 'marketing_opt_in_reference', $out );
 	}
 
 	public function test_the_entry_reference_is_the_entry_admin_url(): void {

@@ -153,14 +153,46 @@ final class Marketing_Opt_In {
 		$choices = array_values( (array) self::get( $field, 'choices' ) );
 		if ( $mapped === $id ) {
 			// The whole field is a single box only when it has one choice.
-			return 1 === count( $inputs ) && isset( $choices[0] ) ? array( 'field' => $field, 'input' => (string) self::get( $inputs[0], 'id' ), 'choice' => $choices[0] ) : null;
+			if ( 1 !== count( $inputs ) || 1 !== count( $choices ) ) {
+				return null;
+			}
+			$choice = self::choice_for( $inputs[0], 0, $choices );
+			return null !== $choice ? array( 'field' => $field, 'input' => (string) self::get( $inputs[0], 'id' ), 'choice' => $choice ) : null;
 		}
 		foreach ( $inputs as $i => $input ) {
-			if ( (string) self::get( $input, 'id' ) === $mapped && isset( $choices[ $i ] ) ) {
-				return array( 'field' => $field, 'input' => $mapped, 'choice' => $choices[ $i ] );
+			if ( (string) self::get( $input, 'id' ) === $mapped ) {
+				$choice = self::choice_for( $input, $i, $choices );
+				return null !== $choice ? array( 'field' => $field, 'input' => $mapped, 'choice' => $choice ) : null;
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The choice an input stands for.
+	 *
+	 * Gravity Forms 2.9+ Multiple Choice and Image Choice fields link an input to its choice by key, and moving a
+	 * choice in the form editor reorders the choices but not the inputs, so position would pair a tick with another
+	 * choice's words. A keyed input with no matching choice gets none rather than a guess. Classic checkbox fields
+	 * have no keys, and Gravity Forms keeps their inputs in choice order.
+	 *
+	 * @param mixed $input   The input.
+	 * @param int   $index   Its position among the inputs.
+	 * @param array $choices The field's choices.
+	 *
+	 * @return mixed|null
+	 */
+	private static function choice_for( $input, $index, array $choices ) {
+		$key = (string) self::get( $input, 'key' );
+		if ( '' !== $key ) {
+			foreach ( $choices as $choice ) {
+				if ( (string) self::get( $choice, 'key' ) === $key ) {
+					return $choice;
+				}
+			}
+			return null;
+		}
+		return isset( $choices[ $index ] ) ? $choices[ $index ] : null;
 	}
 
 	/**
