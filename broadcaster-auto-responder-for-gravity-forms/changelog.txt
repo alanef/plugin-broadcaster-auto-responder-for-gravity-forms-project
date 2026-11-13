@@ -1,4 +1,5 @@
 = Unreleased =
+* Added: a Marketing opt-in field setting on each feed sends the visitor's answer to your form's marketing checkbox, the words they saw and a link to the entry, so Broadcaster can record their marketing permission
 * Added: feed setup shows Broadcaster's warning when the chosen reply template won't reach new enquirers
 * Changed: feed settings explain who receives automatic replies and recommend spam protection on the form
 

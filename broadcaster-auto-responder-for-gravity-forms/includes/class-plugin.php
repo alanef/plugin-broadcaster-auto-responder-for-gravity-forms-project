@@ -88,6 +88,7 @@ class Plugin {
 			. '<li>' . esc_html__( 'The submitter\'s name, when a name field is mapped.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '<li>' . esc_html__( 'The message text and any form-field values included in the mapped message body.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '<li>' . esc_html__( 'A form identifier and source label used to attribute the message inside Broadcaster.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
+			. '<li>' . esc_html__( 'When a marketing opt-in field is mapped: whether the submitter ticked it, the words beside it, whether it started ticked, and a link to the form entry in this site\'s admin area.', 'broadcaster-auto-responder-for-gravity-forms' ) . '</li>'
 			. '</ul>'
 			. '<p>'
 			. esc_html__( 'This data is sent only for forms a site administrator has explicitly connected to Broadcaster, and only when a Broadcaster API key is configured. It is used to create an incoming contact message and, optionally, to trigger an approved WhatsApp template auto-response.', 'broadcaster-auto-responder-for-gravity-forms' )

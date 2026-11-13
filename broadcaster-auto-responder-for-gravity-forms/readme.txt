@@ -49,6 +49,7 @@ This plugin is a connector to **Broadcaster** ([getbroadcaster.com](https://getb
 * The submitter's name, when a name field is mapped.
 * The message text and any form-field values you include in the message body.
 * A form identifier and source label used to attribute the message inside Broadcaster.
+* When a **Marketing opt-in field** is mapped: whether the submitter ticked it, the words beside it, whether it started ticked, and a link to the form entry in your WordPress admin.
 
 Data is sent **only** for forms you have explicitly connected to Broadcaster, and **only** when a Broadcaster API key is configured. No data is sent before then, and the plugin contacts no other external service. Nothing is collected for the plugin's own purposes: no telemetry, analytics, or tracking.
 
@@ -91,6 +92,7 @@ The Broadcaster site URL is hardcoded to `https://getbroadcaster.com` on product
    * **Phone field**: the form field that holds the contact's phone number.
    * **WhatsApp username field**: for contacts who send via WhatsApp username/BSUID rather than phone.
 5. Optionally map a **Submitter name field**.
+   Optionally map a **Marketing opt-in field**: the checkbox on your form that asks permission to send marketing messages. See the FAQ below.
 6. Write the **Message text** the contact's submission becomes inside Broadcaster. Gravity Forms merge tags work, for example `{Message:5}` or `{Name (First):1.3}`.
 7. Optionally fill in the **Template name for business hours** (the *internal* name of an approved Broadcaster template). It is sent during business hours. Leave it empty to send no auto-response during business hours. With **Reply with the same template**, that means no reply outside business hours either.
 8. Under **Outside business hours**, choose what happens when someone fills in the form outside business hours: **Reply with the same template** (the default), **Reply with a different template** (then enter its name in **Template name for outside business hours**), or **Don't reply**. Business hours are the opening hours set on your Company page in Broadcaster.
@@ -144,6 +146,10 @@ Map the **WhatsApp username field** but leave the phone field unmapped. Broadcas
 = What's the WhatsApp Recipient field, and should I use it instead of a stock phone field? =
 
 It's a custom field type this plugin adds, found under *Advanced Fields* in the Gravity Forms editor. It accepts a phone number in any reasonable format (with or without a country code), validates inline before submit so the visitor sees typos as a "Please enter a valid phone number" error and corrects them on the spot, and pre-cleans the value to international format so Broadcaster receives clean data. Use it on new forms and on any form where silent lead-drops have been a problem. Existing forms with stock Gravity Forms phone / text fields continue to work exactly as before; the new field is opt-in. (A future release will also accept WhatsApp usernames in the same field, once Meta enables that feature publicly.)
+
+= What does the Marketing opt-in field do? =
+
+If your form has a checkbox asking permission to send marketing messages, choose it as the feed's **Marketing opt-in field**. Broadcaster then records the answer on the contact: ticked means they agreed to marketing, unticked means they did not, and a later STOP still turns marketing off. With the answer it keeps the words beside the box as the visitor saw them, whether the box started ticked, and a link back to the Gravity Forms entry, which holds the rest of the record. Choose either a single box of a Checkboxes field or a Consent field. If the form has no such box, leave the setting empty and Broadcaster records nothing about marketing. The plugin adds no wording and ticks nothing: you write the box's label and choose whether it starts ticked in the form editor, so check the wording meets the rules where you and your customers are.
 
 = Phone numbers in national format don't match my existing contacts. Why? =
 

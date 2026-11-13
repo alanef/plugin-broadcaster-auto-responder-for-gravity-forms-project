@@ -461,6 +461,15 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'tooltip' => esc_html__( 'Form field that holds the submitter full name. Optional.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
+						// BRO-2014: the form's own opt-in box. The business sets its words and starting state in Gravity Forms.
+						'label'               => esc_html__( 'Marketing opt-in field', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'type'                => 'field_select',
+						'name'                => \BroadcasterGF\GF\Marketing_Opt_In::SETTING,
+						'args'                => array( 'input_types' => array( 'checkbox', 'consent' ) ),
+						'validation_callback' => array( $this, 'validate_marketing_opt_in_field' ),
+						'tooltip'             => esc_html__( 'Optional. Choose the checkbox on your form that asks permission to send marketing messages. Broadcaster records the answer with the words beside the box and a link to this entry: ticked means the contact agreed to marketing, unticked means they did not. Leave it empty if the form has no such box, and Broadcaster records nothing. You choose the box\'s words, and whether it starts ticked, in the form editor.', 'broadcaster-auto-responder-for-gravity-forms' ),
+					),
+					array(
 						'label'    => esc_html__( 'Message text', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'     => 'textarea',
 						'name'     => 'message_text',
@@ -649,6 +658,20 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		// earlier version may still hold placeholder settings; they are not sent.
 		// BRO-1878: what is sent outside business hours follows the feed's "Outside business hours" choice.
 		$payload = array_merge( $payload, \BroadcasterGF\GF\Out_Of_Hours_Reply::payload_fields( $meta ) );
+
+		// BRO-2014: the person's answer to the form's marketing opt-in box, with a link back to this entry as the
+		// proof. Nothing is sent when no box is mapped, so an older Broadcaster behaves as before.
+		$opt_in_field = (string) rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::SETTING );
+		$opt_in       = \BroadcasterGF\GF\Marketing_Opt_In::payload_fields(
+			$opt_in_field,
+			rgar( $form, 'fields', array() ),
+			$entry,
+			\BroadcasterGF\GF\Marketing_Opt_In::entry_reference( admin_url( 'admin.php' ), (int) rgar( $form, 'id' ), (int) $entry_id )
+		);
+		if ( '' !== trim( $opt_in_field ) && array() === $opt_in ) {
+			$this->log_error( __METHOD__ . sprintf( '(): feed %s: marketing opt-in field %s could not be read for entry %s (no box, or no words beside it); no opt-in sent.', $feed_id, $opt_in_field, $entry_id ) );
+		}
+		$payload = array_merge( $payload, $opt_in );
 
 		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
 
@@ -914,6 +937,20 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	public function validate_recipient_field( $field, $value ) {
 		if ( '' === trim( (string) $value ) ) {
 			$field->set_error( esc_html__( 'Choose the form field that holds the phone number.', 'broadcaster-auto-responder-for-gravity-forms' ) );
+		}
+	}
+
+	/**
+	 * Validation callback: the marketing opt-in mapping, if any, is a single box (BRO-2014).
+	 *
+	 * @param \Gravity_Forms\Gravity_Forms\Settings\Fields\Base $field Settings field.
+	 * @param mixed                                              $value Posted value.
+	 */
+	public function validate_marketing_opt_in_field( $field, $value ) {
+		$form  = $this->get_current_form();
+		$error = \BroadcasterGF\GF\Marketing_Opt_In::mapping_error( (string) $value, is_array( $form ) ? rgar( $form, 'fields', array() ) : array() );
+		if ( null !== $error ) {
+			$field->set_error( esc_html( $error ) );
 		}
 	}
 
