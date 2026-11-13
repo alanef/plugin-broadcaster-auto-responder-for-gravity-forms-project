@@ -428,8 +428,10 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	public function feed_settings_fields() {
 		return array(
 			array(
-				'title'  => esc_html__( 'Broadcaster delivery', 'broadcaster-auto-responder-for-gravity-forms' ),
-				'fields' => array(
+				'title'       => esc_html__( 'Broadcaster delivery', 'broadcaster-auto-responder-for-gravity-forms' ),
+				// BRO-2003: said where the feed is set up, not only in a tooltip.
+				'description' => esc_html__( 'An automatic reply goes to whatever number is typed into the form. Nothing checks that the number belongs to the person filling it in, so anyone can make your business send a reply to someone else. On any form with an automatic reply, turn on the anti-spam honeypot in the form\'s settings, or add a CAPTCHA field. An entry Gravity Forms marks as spam never gets a reply.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				'fields'      => array(
 					array(
 						'label'    => esc_html__( 'Feed name', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'     => 'text',
