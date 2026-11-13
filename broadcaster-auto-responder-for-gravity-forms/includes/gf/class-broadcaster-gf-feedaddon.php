@@ -481,7 +481,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						),
 						'validation_callback' => array( $this, 'validate_marketing_opt_in_field' ),
 						'description'         => $this->marketing_opt_in_notice(),
-						'tooltip'             => esc_html__( 'Optional. Choose the checkbox on your form that asks permission to send marketing messages: one box of a Checkboxes or Multiple Choice field, or a Consent field. Broadcaster records the answer with the words beside the box, whether it started ticked, and a link to this entry: ticked means the contact agreed to marketing, unticked means they did not. Leave it empty if the form has no such box, and Broadcaster records nothing. You choose the box\'s words, and whether it starts ticked, in the form editor. If you move or remove the box there, choose it again here and save. Broadcaster cannot tell if custom code or a script ticks the box, so leave it unticked by default.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'tooltip'             => esc_html__( 'Optional. Choose the checkbox on your form that asks permission to send marketing messages: one box of a Checkboxes or Multiple Choice field, or a Consent field. Broadcaster records the answer with the words beside the box, whether it started ticked, and a link to this entry: ticked means the contact agreed to marketing, unticked means they did not. Leave it empty if the form has no such box, and Broadcaster records nothing. You choose the box\'s words, and whether it starts ticked, in the form editor. If you move or remove the box there, choose it again here and save. This plugin cannot tell if custom code or a script ticks the box, so leave it unticked by default.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
 						'label'    => esc_html__( 'Message text', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -1065,7 +1065,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 		if ( $flush ) {
 			\GFFormDisplay::flush_cached_forms( $cache_key );
 		}
-		$rendered = \GFFormDisplay::gform_pre_render( $form, 'form_config' );
+		// On a copy: callbacks that change fields in place must not reach notifications or other feeds.
+		$rendered = \GFFormDisplay::gform_pre_render( \BroadcasterGF\GF\Marketing_Opt_In::form_copy( $form ), 'form_config' );
 		if ( $flush ) {
 			\GFFormDisplay::flush_cached_forms( $cache_key );
 		}

@@ -79,7 +79,7 @@ final class MarketingOptInTest extends TestCase {
 		$this->assertSame( array(), Marketing_Opt_In::payload_fields( '', self::REF ) );
 		$this->assertSame( array(), Marketing_Opt_In::payload_fields( array( 'state' => 'ok', 'wording' => 'Yes' ), self::REF ) );
 		// Only a snapshot that holds an answer is sent, whatever else it carries.
-		foreach ( array( null, Marketing_Opt_In::HIDDEN, Marketing_Opt_In::NOT_FOUND, Marketing_Opt_In::NO_WORDS ) as $state ) {
+		foreach ( array( null, Marketing_Opt_In::HIDDEN, Marketing_Opt_In::NOT_FOUND, Marketing_Opt_In::NO_WORDS, Marketing_Opt_In::BUNDLED ) as $state ) {
 			$snapshot = array( 'ticked' => true, 'wording' => 'Yes', 'prechecked' => false ) + ( null === $state ? array() : array( 'state' => $state ) );
 			$this->assertSame( array(), Marketing_Opt_In::payload_fields( $snapshot, self::REF ), (string) $state );
 		}
@@ -432,5 +432,47 @@ final class MarketingOptInTest extends TestCase {
 			'https://example.test/wp-admin/admin.php?page=gf_entries&view=entry&id=3&lid=41',
 			Marketing_Opt_In::entry_reference( 'https://example.test/wp-admin/admin.php', 3, 41 )
 		);
+	}
+
+	// --- Second reader, pre-release notes ---
+
+	public function test_a_checkboxes_field_with_select_all_is_refused_and_sends_nothing(): void {
+		// Ticking every box at once is not a specific agreement to marketing.
+		$field                    = $this->checkbox( array( array( 'text' => 'Terms', 'value' => 'terms' ), array( 'text' => 'Send me offers', 'value' => 'offers' ) ) );
+		$plain                    = array( $field );
+		$field['enableSelectAll'] = true;
+		$fields                   = array( $field );
+		$saved                    = Marketing_Opt_In::choice_setting( '5.2', $plain );
+		$this->assertNotNull( Marketing_Opt_In::mapping_error( '5.2', $fields ) );
+		$this->assertSame( array(), Marketing_Opt_In::choice_setting( '5.2', $fields ) );
+		$this->assertSame( array(), $this->send( '5.2', $fields, array( '5.2' => 'offers' ), $saved ) );
+		$this->assertStringContainsString( 'Select All', (string) Marketing_Opt_In::moved_notice( '5.2', $saved, $fields ) );
+	}
+
+	public function test_words_changed_in_the_editor_are_noticed_but_still_sent(): void {
+		$before = array( $this->checkbox( array( array( 'text' => 'Send me offers', 'value' => 'offers' ) ) ) );
+		$saved  = Marketing_Opt_In::choice_setting( '5.1', $before );
+		$after  = array( $this->checkbox( array( array( 'text' => 'Send me <b>deals</b>', 'value' => 'offers' ) ) ) );
+		$notice = (string) Marketing_Opt_In::moved_notice( '5.1', $saved, $after );
+		$this->assertStringContainsString( 'Send me offers', $notice );
+		$this->assertStringContainsString( 'still sent', $notice );
+		// Saving again records the new words; it is not refused.
+		$this->assertNull( Marketing_Opt_In::resave_error( '5.1', array( Marketing_Opt_In::SETTING => '5.1', Marketing_Opt_In::CHOICE_SETTING => $saved ), $after ) );
+		// The record holds what the visitor saw.
+		$this->assertSame( 'Send me deals', $this->send( '5.1', $after, array( '5.1' => 'offers' ), $saved )['marketing_opt_in_wording'] ?? null );
+		// Markup alone changing is not a change of words.
+		$same = array( $this->checkbox( array( array( 'text' => '<span>Send me offers</span>', 'value' => 'offers' ) ) ) );
+		$this->assertNull( Marketing_Opt_In::moved_notice( '5.1', $saved, $same ) );
+	}
+
+	public function test_rendering_works_on_a_copy_so_changes_do_not_reach_the_submitted_form(): void {
+		$field = new ArrayObject( array( 'id' => 5, 'label' => 'Keep in touch', 'choices' => array( array( 'text' => 'Yes', 'value' => 'yes' ) ) ) );
+		$form  = array( 'id' => 3, 'fields' => array( $field ) );
+		$copy  = Marketing_Opt_In::form_copy( $form );
+		$copy['fields'][0]['label']   = 'Restez en contact';
+		$copy['fields'][0]['choices'] = array();
+		$this->assertSame( 'Keep in touch', $field['label'] );
+		$this->assertCount( 1, $field['choices'] );
+		$this->assertSame( 3, $copy['id'] );
 	}
 }

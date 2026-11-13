@@ -48,6 +48,7 @@ final class Marketing_Opt_In {
 	const HIDDEN    = 'hidden';
 	const NOT_FOUND = 'not_found';
 	const NO_WORDS  = 'no_words';
+	const BUNDLED   = 'bundled';
 
 	/** Gravity Forms field types the mapping accepts. Product option, survey, quiz and poll checkboxes are not opt-ins. */
 	const FIELD_TYPES = array( 'checkbox', 'multi_choice', 'consent' );
@@ -75,6 +76,9 @@ final class Marketing_Opt_In {
 		}
 		if ( self::unseen( $field ) ) {
 			return __( 'Visitors never see this field (its Visibility is Administrative or Hidden), so it cannot hold their answer. Choose a field they see.', 'broadcaster-auto-responder-for-gravity-forms' );
+		}
+		if ( self::selects_all( $field ) ) {
+			return __( 'This field has Select All turned on. Ticking every box at once is not a specific agreement to marketing, so turn Select All off in the form editor or choose a box in another field.', 'broadcaster-auto-responder-for-gravity-forms' );
 		}
 		if ( 'consent' === self::input_type( $field ) ) {
 			$id = (string) self::get( $field, 'id' );
@@ -135,13 +139,24 @@ final class Marketing_Opt_In {
 		if ( null === $field || ! self::is_opt_in_type( $field ) || 'consent' === self::input_type( $field ) ) {
 			return null;
 		}
+		if ( self::selects_all( $field ) ) {
+			return __( 'The field with the marketing opt-in box now has Select All turned on, so no opt-in is sent: ticking every box at once is not a specific agreement to marketing. Turn Select All off in the form editor.', 'broadcaster-auto-responder-for-gravity-forms' );
+		}
 		$value = (string) self::get( $saved, 'value' );
 		if ( '' === $value ) {
 			return __( 'Choose the marketing opt-in box again and save this feed: the box it uses was not saved with it, so no opt-in is sent.', 'broadcaster-auto-responder-for-gravity-forms' );
 		}
-		$choice = self::choice_at( $mapped, $field );
-		if ( null !== $choice && (string) self::get( $choice, 'value' ) === $value ) {
-			return null;
+		if ( self::in_place( $mapped, $field, $value ) ) {
+			$was = self::plain( self::get( $saved, 'text' ) );
+			if ( '' === $was || self::plain( self::get( self::choice_at( $mapped, $field ), 'text' ) ) === $was ) {
+				return null;
+			}
+			// The record holds what the visitor saw either way; this only tells the admin.
+			return sprintf(
+				/* translators: %s: the words beside the box when the feed was saved. */
+				__( 'The words beside the marketing opt-in box this feed uses have changed in the form editor (they were "%s"). Its answer is still sent, with the words visitors now see. Check them, then save this feed.', 'broadcaster-auto-responder-for-gravity-forms' ),
+				$was
+			);
 		}
 		if ( 1 === count( self::choices_with_value( $field, $value ) ) ) {
 			return sprintf(
@@ -173,6 +188,11 @@ final class Marketing_Opt_In {
 		$previous = is_array( $previous ) ? $previous : array();
 		$saved    = $previous[ self::CHOICE_SETTING ] ?? array();
 		if ( '' === $value || trim( (string) ( $previous[ self::SETTING ] ?? '' ) ) !== $value || '' === (string) self::get( $saved, 'value' ) ) {
+			return null;
+		}
+		$field = self::field( $value, $fields );
+		if ( null !== $field && self::in_place( $value, $field, (string) self::get( $saved, 'value' ) ) ) {
+			// Same box, perhaps with new words: saving records them.
 			return null;
 		}
 		return self::moved_notice( $value, $saved, $fields );
@@ -222,6 +242,9 @@ final class Marketing_Opt_In {
 			$choices    = array_values( (array) self::get( $shown_field, 'choices' ) );
 			$prechecked = $prepopulated || ( isset( $choices[0] ) && ! empty( self::get( $choices[0], 'isSelected' ) ) );
 		} else {
+			if ( self::selects_all( $field ) || self::selects_all( $shown_field ) ) {
+				return array( 'state' => self::BUNDLED );
+			}
 			$value = (string) self::get( $saved, 'value' );
 			if ( '' === $value ) {
 				return array( 'state' => self::NOT_FOUND );
@@ -368,6 +391,53 @@ final class Marketing_Opt_In {
 			}
 		}
 		return $out;
+	}
+
+	/**
+	 * Whether a Checkboxes field offers Select All, which ticks every box at once.
+	 *
+	 * @param array|\ArrayAccess $field Field.
+	 *
+	 * @return bool
+	 */
+	private static function selects_all( $field ) {
+		return ! empty( self::get( $field, 'enableSelectAll' ) );
+	}
+
+	/**
+	 * Whether the box at the mapped input still holds the saved value.
+	 *
+	 * @param string             $mapped Input id.
+	 * @param array|\ArrayAccess $field  Field.
+	 * @param string             $value  Saved value.
+	 *
+	 * @return bool
+	 */
+	private static function in_place( $mapped, $field, $value ) {
+		$choice = self::choice_at( $mapped, $field );
+		return null !== $choice && (string) self::get( $choice, 'value' ) === $value;
+	}
+
+	/**
+	 * A copy of the form whose fields can be changed without touching the form being submitted.
+	 *
+	 * Gravity Forms fields are objects, so gform_pre_render callbacks that change one in place would otherwise
+	 * reach notifications and other feeds in the same request.
+	 *
+	 * @param mixed $form The form.
+	 *
+	 * @return mixed
+	 */
+	public static function form_copy( $form ) {
+		if ( ! is_array( $form ) || ! isset( $form['fields'] ) || ! is_array( $form['fields'] ) ) {
+			return $form;
+		}
+		foreach ( $form['fields'] as $key => $field ) {
+			if ( is_object( $field ) ) {
+				$form['fields'][ $key ] = clone $field;
+			}
+		}
+		return $form;
 	}
 
 	/**

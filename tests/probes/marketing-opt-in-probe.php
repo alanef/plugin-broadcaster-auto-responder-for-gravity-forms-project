@@ -141,10 +141,40 @@ $fr = function ( $f ) {
 	}
 	return $f;
 };
+$seen = function ( $entry, $f ) {
+	foreach ( $f['fields'] as $fl ) {
+		if ( 3 === (int) $fl->id ) {
+			$GLOBALS['bro_after'] = $fl->choices[0]['text'];
+		}
+	}
+	return $entry;
+};
 add_filter( 'gform_pre_render', $fr );
+add_filter( 'gform_entry_post_save', $seen, 1, 2 );
 list( , $b ) = bro_submit( $form_id, array( 'input_3_1' => 'offers' ) );
 remove_filter( 'gform_pre_render', $fr );
+remove_filter( 'gform_entry_post_save', $seen, 1 );
+bro_check( 'D1 pre_render changes stay off the submitted form (notifications, other feeds)', $GLOBALS['bro_after'] ?? null, 'Send me offers' );
 bro_check( 'F2b/F3 pre_render words and tick', bro_optin( $b[0] ?? null ), array( 'marketing_opt_in' => true, 'marketing_opt_in_wording' => 'Envoyez-moi des offres', 'marketing_opt_in_prechecked' => true ) );
+
+// Select All ticks every box at once: refused at save, and nothing is sent if it is turned on later.
+$f = GFAPI::get_form( $form_id );
+foreach ( $f['fields'] as $fl ) {
+	if ( 3 === (int) $fl->id ) {
+		$fl->enableSelectAll = true;
+	}
+}
+GFAPI::update_form( $f );
+bro_check( 'A1 Select All refused at save', null !== Marketing_Opt_In::mapping_error( '3.1', GFAPI::get_form( $form_id )['fields'] ), true );
+list( , $b ) = bro_submit( $form_id, array( 'input_3_1' => 'offers' ) );
+bro_check( 'A1 Select All: message sent, no opt-in', array( count( $b ), bro_optin( $b[0] ?? null ) ), array( 1, array() ) );
+$f = GFAPI::get_form( $form_id );
+foreach ( $f['fields'] as $fl ) {
+	if ( 3 === (int) $fl->id ) {
+		$fl->enableSelectAll = false;
+	}
+}
+GFAPI::update_form( $f );
 
 // Finding 2: an entry with no snapshot (added by the API, not submitted) sends no opt-in.
 $entry_id = GFAPI::add_entry( array( 'form_id' => $form_id, '2' => '+447700900123', '3.1' => 'offers' ) );
