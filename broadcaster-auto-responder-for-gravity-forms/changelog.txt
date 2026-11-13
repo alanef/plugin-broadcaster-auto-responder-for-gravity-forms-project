@@ -1,5 +1,5 @@
 = Unreleased =
-* Added: a Marketing opt-in field setting on each feed sends the visitor's answer to your form's marketing checkbox, the words they saw and a link to the entry, so Broadcaster can record their marketing permission
+* Added: a Marketing opt-in field setting on each feed sends the visitor's answer to your form's marketing checkbox, the words they saw, whether it started ticked and a link to the entry, so Broadcaster can record their marketing permission. The answer is taken when the form is submitted, so later edits to the form don't change it. A box hidden from the visitor, by conditional logic or its Visibility setting, sends nothing. If the chosen box is moved in the form editor, the feed page asks you to choose it again; if it is removed, nothing is sent until you do
 * Added: feed setup shows Broadcaster's warning when the chosen reply template won't reach new enquirers
 * Changed: feed settings explain who receives automatic replies and recommend spam protection on the form
 

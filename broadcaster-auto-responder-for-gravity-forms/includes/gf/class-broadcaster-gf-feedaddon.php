@@ -115,6 +115,16 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	}
 
 	/**
+	 * Register front-end and admin hooks.
+	 */
+	public function init() {
+		parent::init();
+		// BRO-2014: take the marketing opt-in answer when the form is submitted, before any feed runs. It fires for
+		// spam entries too, so an entry marked Not spam later still sends what the visitor saw.
+		add_action( 'gform_entry_created', array( $this, 'snapshot_marketing_opt_in' ), 10, 2 );
+	}
+
+	/**
 	 * Provide the SVG icon shown in the GF sidebar nav for this add-on.
 	 *
 	 * The markup lives in images/menu-icon.php (a file that `return`s the SVG
@@ -465,9 +475,13 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'label'               => esc_html__( 'Marketing opt-in field', 'broadcaster-auto-responder-for-gravity-forms' ),
 						'type'                => 'field_select',
 						'name'                => \BroadcasterGF\GF\Marketing_Opt_In::SETTING,
-						'args'                => array( 'input_types' => array( 'checkbox', 'consent' ) ),
+						'args'                => array(
+							'field_types' => \BroadcasterGF\GF\Marketing_Opt_In::FIELD_TYPES,
+							'input_types' => array( 'checkbox', 'consent' ),
+						),
 						'validation_callback' => array( $this, 'validate_marketing_opt_in_field' ),
-						'tooltip'             => esc_html__( 'Optional. Choose the checkbox on your form that asks permission to send marketing messages. Broadcaster records the answer with the words beside the box and a link to this entry: ticked means the contact agreed to marketing, unticked means they did not. Leave it empty if the form has no such box, and Broadcaster records nothing. You choose the box\'s words, and whether it starts ticked, in the form editor.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'description'         => $this->marketing_opt_in_notice(),
+						'tooltip'             => esc_html__( 'Optional. Choose the checkbox on your form that asks permission to send marketing messages: one box of a Checkboxes or Multiple Choice field, or a Consent field. Broadcaster records the answer with the words beside the box, whether it started ticked, and a link to this entry: ticked means the contact agreed to marketing, unticked means they did not. Leave it empty if the form has no such box, and Broadcaster records nothing. You choose the box\'s words, and whether it starts ticked, in the form editor. If you move or remove the box there, choose it again here and save.', 'broadcaster-auto-responder-for-gravity-forms' ),
 					),
 					array(
 						'label'    => esc_html__( 'Message text', 'broadcaster-auto-responder-for-gravity-forms' ),
@@ -661,17 +675,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 
 		// BRO-2014: the person's answer to the form's marketing opt-in box, with a link back to this entry as the
 		// proof. Nothing is sent when no box is mapped, so an older Broadcaster behaves as before.
-		$opt_in_field = (string) rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::SETTING );
-		$opt_in       = \BroadcasterGF\GF\Marketing_Opt_In::payload_fields(
-			$opt_in_field,
-			rgar( $form, 'fields', array() ),
-			$entry,
-			\BroadcasterGF\GF\Marketing_Opt_In::entry_reference( admin_url( 'admin.php' ), (int) rgar( $form, 'id' ), (int) $entry_id )
-		);
-		if ( '' !== trim( $opt_in_field ) && array() === $opt_in ) {
-			$this->log_error( __METHOD__ . sprintf( '(): feed %s: marketing opt-in field %s could not be read for entry %s (no box, or no words beside it); no opt-in sent.', $feed_id, $opt_in_field, $entry_id ) );
-		}
-		$payload = array_merge( $payload, $opt_in );
+		// Only the snapshot taken at submission is sent: the form may have changed since.
+		$payload = array_merge( $payload, $this->marketing_opt_in_payload( $meta, $form, $entry, $feed_id ) );
 
 		$this->log_debug( __METHOD__ . sprintf( '(): feed %s dispatching entry %s to Broadcaster.', $feed_id, $entry_id ) );
 
@@ -947,11 +952,165 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 * @param mixed                                              $value Posted value.
 	 */
 	public function validate_marketing_opt_in_field( $field, $value ) {
-		$form  = $this->get_current_form();
-		$error = \BroadcasterGF\GF\Marketing_Opt_In::mapping_error( (string) $value, is_array( $form ) ? rgar( $form, 'fields', array() ) : array() );
+		$form   = $this->get_current_form();
+		$fields = is_array( $form ) ? rgar( $form, 'fields', array() ) : array();
+		$error  = \BroadcasterGF\GF\Marketing_Opt_In::mapping_error( (string) $value, $fields );
+		if ( null === $error ) {
+			// Saving the same input id again must not quietly move the feed onto whichever box now has that id.
+			$error = \BroadcasterGF\GF\Marketing_Opt_In::resave_error( (string) $value, $this->get_previous_settings(), $fields );
+		}
 		if ( null !== $error ) {
 			$field->set_error( esc_html( $error ) );
 		}
+	}
+
+	/**
+	 * Save the feed, with the chosen opt-in box's value and text beside its input id (BRO-2014).
+	 *
+	 * @param int   $feed_id  Feed id, 0 for a new feed.
+	 * @param int   $form_id  Form id.
+	 * @param array $settings Validated settings.
+	 *
+	 * @return int The feed id.
+	 */
+	public function save_feed_settings( $feed_id, $form_id, $settings ) {
+		$form = $this->get_current_form();
+		if ( ! is_array( $form ) || (int) rgar( $form, 'id' ) !== (int) $form_id ) {
+			$form = \GFAPI::get_form( $form_id );
+		}
+		$settings[ \BroadcasterGF\GF\Marketing_Opt_In::CHOICE_SETTING ] = \BroadcasterGF\GF\Marketing_Opt_In::choice_setting(
+			(string) rgar( $settings, \BroadcasterGF\GF\Marketing_Opt_In::SETTING ),
+			is_array( $form ) ? rgar( $form, 'fields', array() ) : array()
+		);
+		return parent::save_feed_settings( $feed_id, $form_id, $settings );
+	}
+
+	/**
+	 * On the feed page: say when the saved opt-in box has moved or gone, so the mapping needs choosing again.
+	 *
+	 * @return string|null Escaped HTML.
+	 */
+	private function marketing_opt_in_notice() {
+		if ( ! $this->is_feed_edit_page() ) {
+			return null;
+		}
+		$meta   = $this->current_feed_meta();
+		$form   = $this->get_current_form();
+		$notice = \BroadcasterGF\GF\Marketing_Opt_In::moved_notice(
+			(string) rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::SETTING ),
+			rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::CHOICE_SETTING ),
+			is_array( $form ) ? rgar( $form, 'fields', array() ) : array()
+		);
+		return null === $notice ? null : '<span class="broadcaster-opt-in-warning" role="status" style="color:#b32d2e;">' . esc_html( $notice ) . '</span>';
+	}
+
+	/**
+	 * Keep each mapped feed's marketing opt-in answer on the entry, as the visitor gave it (BRO-2014).
+	 *
+	 * Runs on gform_entry_created: after the entry is saved and before any feed runs, spam or not.
+	 *
+	 * @param array $entry The entry just saved.
+	 * @param array $form  The form as submitted.
+	 */
+	public function snapshot_marketing_opt_in( $entry, $form ) {
+		$entry_id = (int) rgar( $entry, 'id' );
+		if ( ! $entry_id || ! is_array( $form ) ) {
+			return;
+		}
+		$fields    = rgar( $form, 'fields', array() );
+		$shown     = null;
+		$snapshots = array();
+		foreach ( $this->get_active_feeds( (int) rgar( $form, 'id' ) ) as $feed ) {
+			$meta   = is_array( rgar( $feed, 'meta' ) ) ? $feed['meta'] : array();
+			$mapped = trim( (string) rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::SETTING ) );
+			if ( '' === $mapped ) {
+				continue;
+			}
+			if ( null === $shown ) {
+				$shown = $this->rendered_fields( $form );
+			}
+			$snapshots[ (string) rgar( $feed, 'id' ) ] = \BroadcasterGF\GF\Marketing_Opt_In::snapshot(
+				$mapped,
+				rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::CHOICE_SETTING ),
+				$fields,
+				$shown,
+				$entry,
+				function ( $field ) use ( $form, $entry ) {
+					return \GFFormsModel::is_field_hidden( $form, $field, array(), $entry );
+				}
+			);
+		}
+		if ( array() !== $snapshots ) {
+			gform_update_meta( $entry_id, \BroadcasterGF\GF\Marketing_Opt_In::META_KEY, $snapshots, (int) rgar( $form, 'id' ) );
+		}
+	}
+
+	/**
+	 * The form's fields as gform_pre_render shapes them, where Gravity Forms offers that outside display (2.9+).
+	 *
+	 * Translation plugins and code that pre-ticks a box work on gform_pre_render, which a submission never runs.
+	 *
+	 * @param array $form The form as submitted.
+	 *
+	 * @return array
+	 */
+	private function rendered_fields( $form ) {
+		if ( ! method_exists( '\GFFormDisplay', 'gform_pre_render' ) ) {
+			return rgar( $form, 'fields', array() );
+		}
+		// Gravity Forms caches this per form for the request; flush so neither this submission nor a later one
+		// in the same request (bulk submissions, a display) gets another's copy.
+		$cache_key = rgar( $form, 'id' ) . '_form_config';
+		$flush     = method_exists( '\GFFormDisplay', 'flush_cached_forms' );
+		if ( $flush ) {
+			\GFFormDisplay::flush_cached_forms( $cache_key );
+		}
+		$rendered = \GFFormDisplay::gform_pre_render( $form, 'form_config' );
+		if ( $flush ) {
+			\GFFormDisplay::flush_cached_forms( $cache_key );
+		}
+		return is_array( $rendered ) ? rgar( $rendered, 'fields', array() ) : rgar( $form, 'fields', array() );
+	}
+
+	/**
+	 * The opt-in fields for the payload, from the entry's snapshot for this feed only (BRO-2014).
+	 *
+	 * @param array      $meta    Feed meta.
+	 * @param array      $form    Form.
+	 * @param array      $entry   Entry.
+	 * @param int|string $feed_id Feed id.
+	 *
+	 * @return array
+	 */
+	private function marketing_opt_in_payload( $meta, $form, $entry, $feed_id ) {
+		if ( '' === trim( (string) rgar( $meta, \BroadcasterGF\GF\Marketing_Opt_In::SETTING ) ) ) {
+			return array();
+		}
+		$entry_id  = (int) rgar( $entry, 'id' );
+		$snapshots = gform_get_meta( $entry_id, \BroadcasterGF\GF\Marketing_Opt_In::META_KEY );
+		$snapshot  = is_array( $snapshots ) ? rgar( $snapshots, (string) $feed_id ) : null;
+		$opt_in    = \BroadcasterGF\GF\Marketing_Opt_In::payload_fields(
+			$snapshot,
+			\BroadcasterGF\GF\Marketing_Opt_In::entry_reference( admin_url( 'admin.php' ), (int) rgar( $form, 'id' ), $entry_id )
+		);
+		if ( array() !== $opt_in ) {
+			return $opt_in;
+		}
+		$state = is_array( $snapshot ) ? (string) rgar( $snapshot, 'state' ) : 'none';
+		if ( \BroadcasterGF\GF\Marketing_Opt_In::HIDDEN === $state ) {
+			$this->log_debug( __METHOD__ . sprintf( '(): feed %s: marketing opt-in box was hidden for entry %s; no opt-in sent.', $feed_id, $entry_id ) );
+			return array();
+		}
+		$this->log_error( __METHOD__ . sprintf( '(): feed %s: no marketing opt-in answer for entry %s (%s); no opt-in sent.', $feed_id, $entry_id, $state ) );
+		if ( \BroadcasterGF\GF\Marketing_Opt_In::NOT_FOUND === $state ) {
+			\GFAPI::add_note(
+				$entry_id,
+				0,
+				'Broadcaster',
+				esc_html__( 'No marketing opt-in was sent to Broadcaster: the box this feed uses has moved or been removed in the form editor. Open the feed, choose the Marketing opt-in field again and save it.', 'broadcaster-auto-responder-for-gravity-forms' )
+			);
+		}
+		return array();
 	}
 
 	/**
