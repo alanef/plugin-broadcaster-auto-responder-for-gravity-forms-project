@@ -39,6 +39,12 @@ if ( ! function_exists( 'esc_html__' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
 /*
  * Stand-in for sanitize_text_field() so classes that sanitise external data
  * (e.g. Api_Rejection_Surfacer) can run without WP. Approximates core's

@@ -55,12 +55,12 @@ final class ReplyTemplateCheckTest extends TestCase {
 		$reason = 'This template uses {{client_first_name}}. An automatic reply to a form can only use your business details and opening hours, because anything else could come from the visitor. Choose a template without it.';
 		$result = $this->ask( 200, json_encode( array( 'name' => 'contact_form_reply', 'usable' => false, 'reason' => $reason, 'cannot_fill' => array( 'client_first_name' ) ) ) );
 
-		$this->assertSame( array( 'usable' => false, 'reason' => $reason ), $result );
+		$this->assertSame( array( 'usable' => false, 'reason' => $reason, 'warning' => null ), $result );
 	}
 
 	public function test_a_yes_is_a_yes(): void {
 		$this->assertSame(
-			array( 'usable' => true, 'reason' => null ),
+			array( 'usable' => true, 'reason' => null, 'warning' => null ),
 			$this->ask( 200, json_encode( array( 'name' => 'contact_form_reply', 'usable' => true, 'reason' => null, 'cannot_fill' => array() ) ) )
 		);
 	}
@@ -83,5 +83,26 @@ final class ReplyTemplateCheckTest extends TestCase {
 		$this->ask( 200, json_encode( array( 'usable' => true, 'reason' => null ) ), 'a name/with ?odd&chars' );
 
 		$this->assertSame( 'https://broadcaster.example/api/v1/reply-templates/a%20name%2Fwith%20%3Fodd%26chars', $GLOBALS['brogf_test_last_get_url'] );
+	}
+
+	// --- BRO-2003: Broadcaster's warning about a template a new enquirer won't get ---
+
+	public function test_a_warning_comes_back_word_for_word(): void {
+		$warning = "New enquirers won't get this, because they haven't agreed to marketing. Choose a Utility template.";
+		$result  = $this->ask( 200, json_encode( array( 'name' => 'spring_offer', 'usable' => true, 'reason' => null, 'cannot_fill' => array(), 'warning' => $warning ) ), 'spring_offer' );
+
+		$this->assertSame( array( 'usable' => true, 'reason' => null, 'warning' => $warning ), $result );
+	}
+
+	public function test_no_warning_field_or_a_null_one_is_no_warning(): void {
+		// Live Broadcaster before the next web release sends no field; after it, null for a utility template.
+		$this->assertNull( $this->ask( 200, json_encode( array( 'usable' => true, 'reason' => null ) ) )['warning'] );
+		$this->assertNull( $this->ask( 200, json_encode( array( 'usable' => true, 'reason' => null, 'warning' => null ) ) )['warning'] );
+		$this->assertNull( $this->ask( 200, json_encode( array( 'usable' => true, 'warning' => '  ' ) ) )['warning'] );
+		$this->assertNull( $this->ask( 200, json_encode( array( 'usable' => true, 'warning' => array( 'not' => 'text' ) ) ) )['warning'] );
+	}
+
+	public function test_an_unanswered_check_has_no_warning(): void {
+		$this->assertNull( $this->ask( 500, '{"warning":"from an error page"}' )['warning'] );
 	}
 }

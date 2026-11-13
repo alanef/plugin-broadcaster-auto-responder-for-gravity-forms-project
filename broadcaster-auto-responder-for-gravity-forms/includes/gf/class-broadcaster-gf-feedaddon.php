@@ -482,6 +482,8 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'class'               => 'medium',
 						'validation_callback' => array( $this, 'validate_in_hours_template' ),
 						'tooltip'             => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						// BRO-2003: Broadcaster's warning, when it sends one, beside the template.
+						'description'         => $this->reply_template_warning( 'in_hours_template_name' ),
 					),
 				),
 			),
@@ -517,6 +519,7 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 						'class'               => 'medium',
 						'validation_callback' => array( $this, 'validate_out_of_hours_template' ),
 						'tooltip'             => esc_html__( 'Internal name of an approved Broadcaster template.', 'broadcaster-auto-responder-for-gravity-forms' ),
+						'description'         => $this->reply_template_warning( 'out_of_hours_template_name' ),
 						'dependency'          => array(
 							'live'   => true,
 							'fields' => array(
@@ -948,16 +951,66 @@ class Broadcaster_GF_FeedAddOn extends \GFFeedAddOn {
 	 * @param string                                             $name  Trimmed template name.
 	 */
 	private function validate_reply_template( $field, $name ) {
-		$api_key = $this->get_api_key();
-		if ( '' === $name || '' === $api_key ) {
-			return;
-		}
-		$client = new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key );
-		$check  = $client->check_reply_template( $name );
-		if ( false === $check['usable'] ) {
+		$check = $this->reply_template_check( $name );
+		if ( null !== $check && false === $check['usable'] ) {
 			$field->set_error(
 				null !== $check['reason'] ? esc_html( $check['reason'] ) : esc_html__( 'Broadcaster cannot send this template as a reply to a form.', 'broadcaster-auto-responder-for-gravity-forms' )
 			);
 		}
+	}
+
+	/**
+	 * Broadcaster's answer about a template, asked once per name per request: the feed page builds its fields
+	 * and validates a save in the same request, and both need it.
+	 *
+	 * @var array<string,array|null>
+	 */
+	private $reply_template_checks = array();
+
+	/**
+	 * Ask Broadcaster about a template, or null when there is no name or no API key.
+	 *
+	 * @param string $name Trimmed template name.
+	 *
+	 * @return array{usable:bool|null,reason:string|null,warning:string|null}|null
+	 */
+	private function reply_template_check( $name ) {
+		if ( ! array_key_exists( $name, $this->reply_template_checks ) ) {
+			$api_key = $this->get_api_key();
+
+			$this->reply_template_checks[ $name ] = ( '' === $name || '' === $api_key )
+				? null
+				: ( new \BroadcasterGF\Api\Client( $this->get_api_url(), $api_key ) )->check_reply_template( $name );
+		}
+		return $this->reply_template_checks[ $name ];
+	}
+
+	/**
+	 * BRO-2003: the description for a template field, carrying Broadcaster's warning about the template the page
+	 * will show (the one being saved, otherwise the saved one), or null. Only on the feed edit page, so nothing
+	 * else that reads the feed's fields makes a request to Broadcaster.
+	 *
+	 * @param string $setting Template setting name.
+	 *
+	 * @return string|null Escaped HTML.
+	 */
+	private function reply_template_warning( $setting ) {
+		if ( ! $this->is_feed_edit_page() ) {
+			return null;
+		}
+		$meta = $this->current_feed_meta();
+		if ( \Gravity_Forms\Gravity_Forms\Settings\Settings::is_save_postback() ) {
+			$name = rgpost( '_gform_setting_' . $setting );
+			$mode = rgpost( '_gform_setting_' . \BroadcasterGF\GF\Out_Of_Hours_Reply::SETTING );
+		} else {
+			$name = rgar( $meta, $setting );
+			$mode = \BroadcasterGF\GF\Out_Of_Hours_Reply::choice( $meta );
+		}
+		// The out-of-hours template is used only with "Reply with a different template".
+		if ( 'out_of_hours_template_name' === $setting && \BroadcasterGF\GF\Out_Of_Hours_Reply::DIFFERENT !== $mode ) {
+			return null;
+		}
+		$name = trim( sanitize_text_field( wp_unslash( (string) $name ) ) );
+		return \BroadcasterGF\GF\Reply_Template_Warning::description( $this->reply_template_check( $name ) );
 	}
 }

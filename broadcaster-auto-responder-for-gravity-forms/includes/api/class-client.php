@@ -127,9 +127,12 @@ class Client {
 	 * `usable` is null when Broadcaster could not be asked (no answer, or an older Broadcaster without the
 	 * endpoint): the caller decides what an unanswered question means.
 	 *
+	 * `warning` is Broadcaster's text when the template can be sent but will not reach a brand-new enquirer (a
+	 * marketing template, BRO-2003); null when Broadcaster sends none, or is older and does not know the field.
+	 *
 	 * @param string $name The template's internal name.
 	 *
-	 * @return array{usable:bool|null,reason:string|null}
+	 * @return array{usable:bool|null,reason:string|null,warning:string|null}
 	 */
 	public function check_reply_template( string $name ): array {
 		$response = wp_remote_get(
@@ -145,8 +148,9 @@ class Client {
 
 		if ( is_wp_error( $response ) ) {
 			return array(
-				'usable' => null,
-				'reason' => null,
+				'usable'  => null,
+				'reason'  => null,
+				'warning' => null,
 			);
 		}
 
@@ -157,14 +161,16 @@ class Client {
 		// Broadcaster, a key without message intake, an outage) is not an answer.
 		if ( ( 200 === $code || 404 === $code ) && is_array( $decoded ) && array_key_exists( 'usable', $decoded ) ) {
 			return array(
-				'usable' => (bool) $decoded['usable'],
-				'reason' => isset( $decoded['reason'] ) && is_string( $decoded['reason'] ) ? $decoded['reason'] : null,
+				'usable'  => (bool) $decoded['usable'],
+				'reason'  => isset( $decoded['reason'] ) && is_string( $decoded['reason'] ) ? $decoded['reason'] : null,
+				'warning' => isset( $decoded['warning'] ) && is_string( $decoded['warning'] ) && '' !== trim( $decoded['warning'] ) ? $decoded['warning'] : null,
 			);
 		}
 
 		return array(
-			'usable' => null,
-			'reason' => null,
+			'usable'  => null,
+			'reason'  => null,
+			'warning' => null,
 		);
 	}
 

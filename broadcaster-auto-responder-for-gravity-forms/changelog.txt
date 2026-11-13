@@ -1,4 +1,5 @@
 = Unreleased =
+* Added: feed setup shows Broadcaster's warning when the chosen reply template won't reach new enquirers
 * Changed: feed settings explain who receives automatic replies and recommend spam protection on the form
 
 = 1.2.0 =
