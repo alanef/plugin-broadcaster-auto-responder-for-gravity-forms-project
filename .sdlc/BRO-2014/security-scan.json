@@ -1,0 +1,59 @@
+{
+  "issue_id": "BRO-2014",
+  "scan_date": "2026-11-13",
+  "scanned_by": "AI Assistant",
+  "commit_range": "2a4fec0..b6c0a81",
+  "files_analyzed": [
+    "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
+    "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+    "broadcaster-auto-responder-for-gravity-forms/includes/class-plugin.php",
+    "tests/unit/MarketingOptInTest.php",
+    "broadcaster-auto-responder-for-gravity-forms/readme.txt",
+    "broadcaster-auto-responder-for-gravity-forms/changelog.txt"
+  ],
+  "findings": [
+    {
+      "severity": "Low",
+      "category": "A04: Insecure Design",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
+      "description": "Checkbox wording is read from the form when the feed runs; a feed run later sends the label current then. Consent fields use the entry's own text.",
+      "recommendation": "Accept for 1.3.0; note for Broadcaster's consent record."
+    },
+    {
+      "severity": "Info",
+      "category": "A03: Injection",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
+      "description": "Only visitor-sent wording is the consent .2, protected by Gravity Forms state validation (probe: tampered state refused). Sent as JSON.",
+      "recommendation": "Broadcaster escapes the wording wherever it shows it."
+    },
+    {
+      "severity": "Info",
+      "category": "A01: Broken Access Control",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
+      "description": "Reference is a wp-admin URL from int-cast ids; only a logged-in admin can open it.",
+      "recommendation": "None."
+    },
+    {
+      "severity": "Info",
+      "category": "Data Protection",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+      "description": "New data sent is disclosed in readme Privacy and Settings > Privacy text; new log line holds ids only; nothing new stored.",
+      "recommendation": "None."
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 1,
+    "info": 3,
+    "total": 4
+  },
+  "recommendation": "PASS_WITH_NOTES",
+  "blocking_issues": [],
+  "notes": [
+    "Instrument validation: phpcs security standard does not flag removed escaping on a returned string (control mutation, exit 0); the unit test does.",
+    "Secret-exposure grep validated against 66cfd84^ (BRO-1468); lower bound.",
+    "Personal-data-in-logs check is UNVALIDATED: no previous fix of the class exists in this repo."
+  ]
+}

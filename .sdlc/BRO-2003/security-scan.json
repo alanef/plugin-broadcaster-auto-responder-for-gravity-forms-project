@@ -1,0 +1,62 @@
+{
+  "issue_id": "BRO-2003",
+  "scan_date": "2026-11-13",
+  "scanned_by": "AI Assistant",
+  "commit_range": "bb66373..b6d6a90",
+  "scope": "plugin side only; broadcaster-web changes are scanned in that repo",
+  "files_analyzed": [
+    "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+    "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-reply-template-warning.php",
+    "broadcaster-auto-responder-for-gravity-forms/includes/api/class-client.php",
+    "tests/unit/SpamGateTest.php",
+    "tests/unit/ReplyTemplateWarningTest.php",
+    "tests/unit/ReplyTemplateCheckTest.php",
+    "broadcaster-auto-responder-for-gravity-forms/readme.txt",
+    "broadcaster-auto-responder-for-gravity-forms/changelog.txt"
+  ],
+  "findings": [
+    {
+      "severity": "Low",
+      "category": "Availability",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
+      "description": "Feed edit page waits on up to two Broadcaster requests (10 s timeout each).",
+      "recommendation": "Follow-up for a shorter render-path timeout or a short transient."
+    },
+    {
+      "severity": "Info",
+      "category": "A03: Injection",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-reply-template-warning.php",
+      "description": "API warning text escaped with esc_html; markup shown as text (unit and wp-env).",
+      "recommendation": "None."
+    },
+    {
+      "severity": "Info",
+      "category": "A10: SSRF",
+      "file": "broadcaster-auto-responder-for-gravity-forms/includes/api/class-client.php",
+      "description": "Template check goes only to the configured API URL; name encoded into the path; feed edit page only.",
+      "recommendation": "None."
+    },
+    {
+      "severity": "Info",
+      "category": "A04: Insecure Design",
+      "file": "tests/unit/SpamGateTest.php",
+      "description": "Spam-marked entries never run the feed; no dispatch path around Gravity Forms' spam gate.",
+      "recommendation": "None."
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 1,
+    "info": 3,
+    "total": 4
+  },
+  "recommendation": "PASS_WITH_NOTES",
+  "blocking_issues": [],
+  "notes": [
+    "Instrument validation: phpcs security standard does not flag removed escaping on a returned string (mutation W1, exit 0); the unit tests do.",
+    "Secret-exposure grep validated against 66cfd84^ (BRO-1468); 3 hits in range, all the existing Bearer header path.",
+    "Web commit a6405fcaf (sends the warning) is on no broadcaster-web remote branch yet; the plugin shows nothing until it ships."
+  ]
+}
