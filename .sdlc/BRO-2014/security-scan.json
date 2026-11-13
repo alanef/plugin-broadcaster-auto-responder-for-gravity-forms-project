@@ -2,7 +2,7 @@
   "issue_id": "BRO-2014",
   "scan_date": "2026-11-13",
   "scanned_by": "AI Assistant",
-  "commit_range": "2a4fec0..a0177e3",
+  "commit_range": "2a4fec0..fb7ddda",
   "files_analyzed": [
     "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-marketing-opt-in.php",
     "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
@@ -16,8 +16,8 @@
       "severity": "Low",
       "category": "A04: Insecure Design",
       "file": "broadcaster-auto-responder-for-gravity-forms/includes/gf/class-broadcaster-gf-feedaddon.php",
-      "description": "Third-party gform_pre_render callbacks also run at submission (form_config context, as Gravity Forms does for its config). Prechecked is approximate.",
-      "recommendation": "PLUGINS Manager decision recorded in verification.md."
+      "description": "Third-party gform_pre_render callbacks also run at submission (form_config context, as Gravity Forms does for its config). Prechecked is approximate. Since fb7ddda run on a copy of the form (probe D1).",
+      "recommendation": "Accepted by PLUGINS Manager."
     },
     {
       "severity": "Info",
@@ -62,6 +62,7 @@
     "Earlier Low (wording read when the feed runs) closed by a0177e3.",
     "phpcs security standard is not an instrument for escaping in returned strings (BRO-2003 W1); escaping checked by reading each output.",
     "Secret-exposure grep validated against 66cfd84^ (BRO-1468); 0 hits in range.",
-    "Personal-data-in-logs check is UNVALIDATED: no earlier fix of the class in this repo."
+    "Personal-data-in-logs check is UNVALIDATED: no earlier fix of the class in this repo.",
+    "fb7ddda: Select All checkboxes refused (bundled consent); new notice text escaped as before."
   ]
 }

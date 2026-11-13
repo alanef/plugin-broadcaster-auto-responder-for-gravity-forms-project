@@ -6,13 +6,15 @@
 
 ## Commit Range Covered
 
-**Commit range covered:** `2a4fec0..a0177e3`
+**Commit range covered:** `2a4fec0..fb7ddda`
 
 | SHA | Subject |
 |---|---|
 | 2a4fec0 | BRO-2014: Marketing opt-in field on each feed |
 | b6c0a81 | BRO-2014: pair a Multiple Choice field's ticked box with its own words |
 | a0177e3 | BRO-2014: take the marketing opt-in answer at submission and find the box by its value |
+| f238c49 | BRO-2014: say that a box ticked by custom code or script cannot be detected |
+| fb7ddda | BRO-2014: refuse Select All, note changed words, render on a copy |
 
 ```bash
 git fetch --all
@@ -40,7 +42,7 @@ The earlier Low (wording read when the feed runs) is closed by a0177e3: the answ
 1. **A04: Insecure Design**, `class-broadcaster-gf-feedaddon.php` `rendered_fields()`: third-party
    `gform_pre_render` callbacks now also run at submission, in Gravity Forms' own `form_config`
    context. Gravity Forms does the same for its config. A callback that assumes display could
-   misbehave. Prechecked is approximate (see verification.md, open decision).
+   misbehave. Prechecked is approximate; accepted by PLUGINS Manager. Since fb7ddda the callbacks run on a copy of the form, so changes they make in place no longer reach notifications or other feeds (probe D1).
 
 ### Info
 

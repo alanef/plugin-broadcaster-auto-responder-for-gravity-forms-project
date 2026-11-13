@@ -20,13 +20,15 @@
 
 ## Commit Range Covered
 
-**Commit range covered:** `2a4fec0..a0177e3`
+**Commit range covered:** `2a4fec0..fb7ddda`
 
 | SHA | Subject |
 |---|---|
 | 2a4fec0 | BRO-2014: Marketing opt-in field on each feed |
 | b6c0a81 | BRO-2014: pair a Multiple Choice field's ticked box with its own words |
 | a0177e3 | BRO-2014: take the marketing opt-in answer at submission and find the box by its value |
+| f238c49 | BRO-2014: say that a box ticked by custom code or script cannot be detected |
+| fb7ddda | BRO-2014: refuse Select All, note changed words, render on a copy |
 
 ```bash
 git fetch --all
@@ -119,6 +121,32 @@ Tests changed: `MarketingOptInTest` (written in this issue by this session) was 
 - Lint: `composer phpcs`, `composer compat:7.4`, `composer compat:8.4`: exit 0
 - wp-env probe, Gravity Forms 2.10.2, real `GF_Field_Checkbox` objects, HTTP faked, fixture number +447700900123 (Ofcom drama range): 23/23 PASS
 - CI on a0177e3: run 43462427508 success (PHPUnit wp-env; PHPCS, version consistency and Plugin Check)
+
+## Third Run (2026-11-13): second reader PASS_WITH_NOTES through f238c49
+
+PLUGINS Manager accepted prechecked as approximate (f238c49 adds the "cannot tell" wording). The second reader's pre-release notes, fixed in fb7ddda, each reproduced first:
+
+| # | Note | Fix | Fails before the fix |
+|---|---|---|---|
+| 1 | `gform_pre_render` changed the submitted form's field objects in place | Rendered on a copy (`Marketing_Opt_In::form_copy`, fields cloned) | Unit test (error: no copy); probe D1 on real `GF_Field`: notifications/feeds saw "Envoyez-moi des offres" without the copy |
+| 2 | Notice compared only the value | Words changed with the same value: notice says the answer is still sent; re-saving is allowed and records the new words; markup-only change is not noticed | Unit test failed |
+| 3 | Select All bundles consent | Refused on save; snapshot state `bundled` sends nothing; feed page notice | Unit test failed; probe A1 |
+| 4 | Readme accuracy | Show Values, dynamic population always counted, mapping in force at submission (accepted as designed) | Copy |
+| 5 | "Broadcaster cannot tell" | "This plugin cannot tell" in tooltip and FAQ; wp-env shows the tooltip | Copy |
+
+The changelog line was corrected to match (moved or words changed: still sent and noticed; removed or value changed: nothing sent).
+
+Test changed: `MarketingOptInTest` (own test) gained `BUNDLED` in the non-ok states loop.
+
+Code review: this session only. PLUGINS Manager spot-checks the diff in place of a third full read.
+
+Runs on fb7ddda:
+- Unit: OK (176 tests, 339 assertions)
+- Lint: phpcs, compat 7.4, compat 8.4 exit 0
+- wp-env probe: 26/26 PASS
+- CI: run 43464152363 success
+
+**Overall:** READY, pending PLUGINS Manager's spot-check. Not tagged.
 
 ---
 Verified by: AI Assistant
